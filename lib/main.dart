@@ -89,7 +89,7 @@ class HomeScreenWidget extends StatelessWidget {
                     if (client.connectionStatus!.state != mqttClient.MqttConnectionState.connected) {
                       _connect();
                     }
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => NormalModeWidget(client: client)));
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => InsertModeWidget(client: client)));
                   },
                   child: Text('Rezim unosa artikala')
               ),
@@ -98,7 +98,7 @@ class HomeScreenWidget extends StatelessWidget {
                     if (client.connectionStatus!.state != mqttClient.MqttConnectionState.connected) {
                       _connect();
                     }
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => NormalModeWidget(client: client)));
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => DeleteModeWidget(client: client)));
                   },
                   child: const Text("Rezim brisanja artikala")
               )
@@ -124,7 +124,7 @@ class NormalModeState extends State<NormalModeWidget> {
   String successMessage = '';
 
 
-
+  //ne treba ovdje future jer nista nije async
   Future<void> SendBarCode() async {
     try {
 
@@ -206,14 +206,14 @@ class NormalModeState extends State<NormalModeWidget> {
                                 scanBarcodeNormal();
                               },
                               child: const Text('Skeniranje pojedinacnih artikala')),
-                          ElevatedButton(
-                              onPressed: () => startBarcodeScanStream(),
-                              child: const Text('Neprekidno skeniranje artikala')),
+                          // ElevatedButton(
+                          //     onPressed: () => startBarcodeScanStream(),
+                          //     child: const Text('Neprekidno skeniranje artikala')),
                           Text('Barkod: $_scanBarcode\n',
                               style: const TextStyle(fontSize: 20)),
                           ElevatedButton(
                               onPressed: () => SendBarCode(),
-                              child: const Text("Posalji skenirani barkod")
+                              child: const Text("Slanje skeniranog barkoda")
                           ),
                           Text('$successMessage\n',
                           style: const TextStyle(fontSize: 20))
@@ -224,6 +224,277 @@ class NormalModeState extends State<NormalModeWidget> {
         Navigator.pop(context);
         return false;
       }
+    );
+  }
+}
+
+///////////////////////////////////////////////////////////////
+//////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////
+
+class InsertModeWidget extends StatefulWidget {
+  const InsertModeWidget({Key? key, required this.client}) : super(key: key);
+
+  final mqtt.MqttServerClient client;
+
+  @override
+  InsertModeState createState() => InsertModeState();
+}
+
+class InsertModeState extends State<InsertModeWidget> {
+  String _scanBarcode = '';
+  String successMessage = '';
+
+  final textController = TextEditingController();
+  final priceController = TextEditingController();
+
+  @override
+  void dispose() {
+    textController.dispose();
+    priceController.dispose();
+    //smijemo li pozvati super.dispose() da se ne ukine konekcija na broker
+    //mada sam se osigurao u home ruti da ako konekcija nije uspostavljena da je uspostavi
+  }
+
+  Future<void> SendAll() async {
+    try {
+
+      String pubTopic = 'US/Kasa/BarKod';
+      final builder = mqttClient.MqttClientPayloadBuilder();
+      builder.addString(_scanBarcode);
+      /// Subscribe to it
+      widget.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
+      /// Publish it
+      widget.client.publishMessage(
+          pubTopic, mqttClient.MqttQos.atMostOnce, builder.payload!);
+
+      //////////////////////////////////////////
+
+      pubTopic = 'US/Kasa/Naziv';
+      builder.clear();
+      builder.addString(textController.text);
+      widget.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
+      widget.client.publishMessage(
+          pubTopic, mqttClient.MqttQos.atMostOnce, builder.payload!);
+
+      /////////////////////////////////////////////
+
+      pubTopic = 'US/Kasa/Cijena';
+      builder.clear();
+      builder.addString(priceController.text);
+      widget.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
+      widget.client.publishMessage(
+          pubTopic, mqttClient.MqttQos.atMostOnce, builder.payload!);
+
+
+
+      setState(() {
+        successMessage = "Uspjesno slanje artikla.";
+      });
+    }
+    on Exception {
+      setState(() {
+        successMessage = "Neuspjesno slanje artikla.";
+      });
+    }
+  }
+
+
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  Future<void> startBarcodeScanStream() async {
+    FlutterBarcodeScanner.getBarcodeStreamReceiver(
+        '#ff6666', 'Otkazi', true, ScanMode.BARCODE)!
+        .listen((barcode) => {});
+  }
+
+  // Platform messages are asynchronous, so we initialize in an async method.
+  Future<void> scanBarcodeNormal() async {
+    String barcodeScanRes;
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    try {
+      barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
+          '#ff6666', 'Otkazi', true, ScanMode.BARCODE);
+    } on PlatformException {
+      barcodeScanRes = 'Failed to get platform version.';
+    }
+
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+    if (!mounted) return;
+
+    setState(() {
+      _scanBarcode = barcodeScanRes;
+      successMessage = "";
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+        child:
+        MaterialApp(
+            home: Scaffold(
+                appBar: AppBar(title: const Text('Unos artikla')),
+                body: Builder(builder: (BuildContext context) {
+                  return Container(
+                      alignment: Alignment.center,
+                      child: Flex(
+                          direction: Axis.vertical,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            TextField(
+                              controller: textController,
+                              autofocus: true,
+                              decoration: const InputDecoration(
+                                hintText: "Unesite naziv artikla"
+                              ),
+                            ),
+                            TextField(
+                              controller: priceController,
+                              autofocus: false,
+                              decoration: const InputDecoration(
+                                  hintText: "Unesite cijenu artikla"
+                              ),
+                            ),
+                            ElevatedButton(
+                                onPressed: () => scanBarcodeNormal(),
+                                child: const Text('Unesite barkod artikla')),
+                            Text('Barkod: $_scanBarcode\n',
+                                style: const TextStyle(fontSize: 20)),
+                            ElevatedButton(
+                                onPressed: () => SendAll(),
+                                child: const Text("Slanje artikla")
+                            ),
+                            Text('$successMessage\n',
+                                style: const TextStyle(fontSize: 20))
+                          ]));
+                }))
+        ),
+        onWillPop: () async {
+          Navigator.pop(context);
+          return false;
+        }
+    );
+  }
+}
+
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////
+
+class DeleteModeWidget extends StatefulWidget {
+  const DeleteModeWidget({Key? key, required this.client}) : super(key: key);
+
+  final mqtt.MqttServerClient client;
+
+  @override
+  DeleteModeState createState() => DeleteModeState();
+}
+
+class DeleteModeState extends State<DeleteModeWidget> {
+  String _scanBarcode = '';
+  String successMessage = '';
+
+
+  //ne treba ovdje future jer nista nije async
+  Future<void> SendBarCode() async {
+    try {
+
+      const pubTopic = 'US/Kasa/BarKod';
+      final builder = mqttClient.MqttClientPayloadBuilder();
+      builder.addString(_scanBarcode);
+
+      /// Subscribe to it
+
+      widget.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
+
+      /// Publish it
+
+      widget.client.publishMessage(
+          pubTopic, mqttClient.MqttQos.atMostOnce, builder.payload!);
+
+      setState(() {
+        successMessage = "Uspjesno brisanje artikla.";
+      });
+    }
+    on Exception {
+      setState(() {
+        successMessage = "Neuspjesno brisanje artikla.";
+      });
+    }
+  }
+
+
+
+  @override
+  void initState() {
+    super.initState();
+  }
+
+  // Platform messages are asynchronous, so we initialize in an async method.
+  Future<void> scanBarcodeNormal() async {
+    String barcodeScanRes;
+    // Platform messages may fail, so we use a try/catch PlatformException.
+    try {
+      barcodeScanRes = await FlutterBarcodeScanner.scanBarcode(
+          '#ff6666', 'Otkazi', true, ScanMode.BARCODE);
+    } on PlatformException {
+      barcodeScanRes = 'Failed to get platform version.';
+    }
+
+    // If the widget was removed from the tree while the asynchronous platform
+    // message was in flight, we want to discard the reply rather than calling
+    // setState to update our non-existent appearance.
+    if (!mounted) return;
+
+    setState(() {
+      _scanBarcode = barcodeScanRes;
+      successMessage = "";
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return WillPopScope(
+        child:
+        MaterialApp(
+            home: Scaffold(
+                appBar: AppBar(title: const Text('Brisanje artikla')),
+                body: Builder(builder: (BuildContext context) {
+                  return Container(
+                      alignment: Alignment.center,
+                      child: Flex(
+                          direction: Axis.vertical,
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: <Widget>[
+                            ElevatedButton(
+                                onPressed: () {
+                                  scanBarcodeNormal();
+                                },
+                                child: const Text('Skeniranje barkoda')),
+                            Text('Barkod: $_scanBarcode\n',
+                                style: const TextStyle(fontSize: 20)),
+                            ElevatedButton(
+                                onPressed: () => SendBarCode(),
+                                child: const Text("Slanje skeniranog barkoda")
+                            ),
+                            Text('$successMessage\n',
+                                style: const TextStyle(fontSize: 20))
+                          ]));
+                }))
+        ),
+        onWillPop: () async {
+          Navigator.pop(context);
+          return false;
+        }
     );
   }
 }
