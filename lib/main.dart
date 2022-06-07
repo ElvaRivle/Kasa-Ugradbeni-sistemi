@@ -7,12 +7,12 @@ import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 void main() {
   runApp(const MaterialApp(
     title: "Kasa - US",
-    home: HomeScreen()
+    home: HomeScreenWidget()
   ));
 }
 
-class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+class HomeScreenWidget extends StatelessWidget {
+  const HomeScreenWidget({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +28,7 @@ class HomeScreen extends StatelessWidget {
             children: <Widget>[
               ElevatedButton(
                   onPressed: () => {
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => MyApp()))
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => NormalModeWidget()))
                   },
                   child: const Text('Rezim normalnog rada')
               ),
@@ -48,12 +48,14 @@ class HomeScreen extends StatelessWidget {
 
 }
 
-class MyApp extends StatefulWidget {
+class NormalModeWidget extends StatefulWidget {
+  const NormalModeWidget({Key? key}) : super(key: key);
+
   @override
-  _MyAppState createState() => _MyAppState();
+  NormalModeState createState() => NormalModeState();
 }
 
-class _MyAppState extends State<MyApp> {
+class NormalModeState extends State<NormalModeWidget> {
   String _scanBarcode = '';
 
   @override
@@ -91,25 +93,33 @@ class _MyAppState extends State<MyApp> {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-        home: Scaffold(
-            appBar: AppBar(title: const Text('Barkod skener')),
-            body: Builder(builder: (BuildContext context) {
-              return Container(
-                  alignment: Alignment.center,
-                  child: Flex(
-                      direction: Axis.vertical,
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: <Widget>[
-                        ElevatedButton(
-                            onPressed: () => scanBarcodeNormal(),
-                            child: Text('Skeniranje pojedinacnih artikala')),
-                        ElevatedButton(
-                            onPressed: () => startBarcodeScanStream(),
-                            child: Text('Neprekidno skeniranje artikala')),
-                        Text('Barkod: $_scanBarcode\n',
-                            style: TextStyle(fontSize: 20))
-                      ]));
-            })));
+    return WillPopScope(
+      child:
+        MaterialApp(
+          home: Scaffold(
+              appBar: AppBar(title: const Text('Barkod skener')),
+              body: Builder(builder: (BuildContext context) {
+                return Container(
+                    alignment: Alignment.center,
+                    child: Flex(
+                        direction: Axis.vertical,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: <Widget>[
+                          ElevatedButton(
+                              onPressed: () => scanBarcodeNormal(),
+                              child: Text('Skeniranje pojedinacnih artikala')),
+                          ElevatedButton(
+                              onPressed: () => startBarcodeScanStream(),
+                              child: Text('Neprekidno skeniranje artikala')),
+                          Text('Barkod: $_scanBarcode\n',
+                              style: TextStyle(fontSize: 20))
+                        ]));
+              }))
+        ),
+      onWillPop: () async {
+        Navigator.pop(context);
+        return false;
+      }
+    );
   }
 }
