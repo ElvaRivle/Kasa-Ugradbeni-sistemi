@@ -42,7 +42,7 @@ class HomeScreenWidget extends StatelessWidget {
               ),
               ElevatedButton(
                   onPressed: () => {}, 
-                  child: const Text("Rezim brisanja artikla")
+                  child: const Text("Rezim brisanja artikala")
               )
             ]
           )
@@ -92,46 +92,40 @@ class NormalModeState extends State<NormalModeWidget> {
     client.connectionMessage = connMess;
 
     try {
-      print("SPAJANJE!!!!");
       client.connect();
-      print("USPJESNO SPAJANJE!!!!");
     } catch (e) {
-      print(e);
       client.disconnect();
-      print("PAO AWAIT CONNECT :( :( :( :(");
     }
     
     //if (client.connectionStatus!.state != mqttClient.MqttConnectionState.connected) {
-    //  print("STATUS NIJE CONNECTED!!!!!!");
+    //
     //  client.disconnect();
     //}
   }
 
   /// The unsolicited disconnect callback
   void onDisconnected() {
-    print(
-        'ONDISCONNECT!!!!');
+
   }
 
   /// The successful connect callback
   void onConnected() {
-    print(
-        'ONCONNECT!!!!!');
+
   }
-//TODO: OBRISATI PRINTOVI, STAVITI PORUKU USPJESNOG SLANJA
+
   Future<void> SendBarCode() async {
     try {
-      print("SALJEMO!!!!!!");
+
       const pubTopic = 'US/Kasa/BarKod';
       final builder = mqttClient.MqttClientPayloadBuilder();
       builder.addString(_scanBarcode);
 
       /// Subscribe to it
-      print('SUB!!!!!!!');
+
       client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
 
       /// Publish it
-      print('PUBLISH!!!!!!!');
+
       client.publishMessage(
           pubTopic, mqttClient.MqttQos.atMostOnce, builder.payload!);
 
@@ -210,6 +204,8 @@ class NormalModeState extends State<NormalModeWidget> {
                               onPressed: () => SendBarCode(),
                               child: const Text("Posalji skenirani barkod")
                           ),
+                          Text('$successMessage\n',
+                          style: const TextStyle(fontSize: 20))
                         ]));
               }))
         ),
