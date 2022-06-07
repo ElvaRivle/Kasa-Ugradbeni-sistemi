@@ -4,20 +4,53 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
 
-void main() => runApp(MyApp());
+void main() {
+  runApp(const MaterialApp(
+    title: "Kasa - US",
+    home: HomeScreen()
+  ));
+}
+
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Kasa - US")
+      ),
+      body: Container(
+          alignment: Alignment.center,
+          child: Flex(
+            direction: Axis.vertical,
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: <Widget>[
+              ElevatedButton(
+                  onPressed: () => {
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => MyApp()))
+                  },
+                  child: const Text('Rezim normalnog rada')
+              ),
+              ElevatedButton(
+                  onPressed: () => {},
+                  child: Text('Rezim unosa artikala')
+              ),
+              ElevatedButton(
+                  onPressed: () => {}, 
+                  child: const Text("Rezim brisanja artikla")
+              )
+            ]
+          )
+        )
+      );
+  }
+
+}
 
 class MyApp extends StatefulWidget {
   @override
   _MyAppState createState() => _MyAppState();
-}
-
-class HomeScreen extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    // TODO: implement build
-    throw UnimplementedError();
-  }
-
 }
 
 class _MyAppState extends State<MyApp> {
@@ -70,10 +103,10 @@ class _MyAppState extends State<MyApp> {
                       children: <Widget>[
                         ElevatedButton(
                             onPressed: () => scanBarcodeNormal(),
-                            child: Text('Pokreni skeniranje jednog artikla')),
+                            child: Text('Skeniranje pojedinacnih artikala')),
                         ElevatedButton(
                             onPressed: () => startBarcodeScanStream(),
-                            child: Text('Pokreni neprekidno skeniranje artikala')),
+                            child: Text('Neprekidno skeniranje artikala')),
                         Text('Barkod: $_scanBarcode\n',
                             style: TextStyle(fontSize: 20))
                       ]));
