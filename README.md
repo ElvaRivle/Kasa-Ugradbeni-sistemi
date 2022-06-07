@@ -1,16 +1,6 @@
 # kasa_us
 
-A new Flutter project.
+## Mobilna aplikacija za potrebe projekta iz predmeta Ugradbeni sistemi
 
-## Getting Started
-
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+Mogućnost skeniranja barkodova proizvoda, unos naziva artikala i 
+cijene te slanje tih informacija preko MQTT brokera na sistem koji pokrece softver za upravljanje kasom.  
