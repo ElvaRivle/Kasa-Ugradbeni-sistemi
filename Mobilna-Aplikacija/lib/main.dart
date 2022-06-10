@@ -128,7 +128,7 @@ class NormalModeState extends State<NormalModeWidget> {
   Future<void> SendBarCode() async {
     try {
 
-      const pubTopic = 'US/Kasa/BarKod';
+      const pubTopic = 'projekatkasa/kasa/kod';
       final builder = mqttClient.MqttClientPayloadBuilder();
       builder.addString(_scanBarcode);
 
@@ -260,34 +260,14 @@ class InsertModeState extends State<InsertModeWidget> {
   Future<void> SendAll() async {
     try {
 
-      String pubTopic = 'US/Kasa/BarKod';
+      String pubTopic = 'projekatkasa/kasa/unos';
       final builder = mqttClient.MqttClientPayloadBuilder();
-      builder.addString(_scanBarcode);
+      builder.addString('${textController.text},${priceController.text},$_scanBarcode');
       /// Subscribe to it
       widget.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
       /// Publish it
       widget.client.publishMessage(
           pubTopic, mqttClient.MqttQos.atMostOnce, builder.payload!);
-
-      //////////////////////////////////////////
-
-      pubTopic = 'US/Kasa/Naziv';
-      builder.clear();
-      builder.addString(textController.text);
-      widget.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
-      widget.client.publishMessage(
-          pubTopic, mqttClient.MqttQos.atMostOnce, builder.payload!);
-
-      /////////////////////////////////////////////
-
-      pubTopic = 'US/Kasa/Cijena';
-      builder.clear();
-      builder.addString(priceController.text);
-      widget.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
-      widget.client.publishMessage(
-          pubTopic, mqttClient.MqttQos.atMostOnce, builder.payload!);
-
-
 
       setState(() {
         successMessage = "Uspjesno slanje artikla.";
@@ -408,7 +388,7 @@ class DeleteModeState extends State<DeleteModeWidget> {
   Future<void> SendBarCode() async {
     try {
 
-      const pubTopic = 'US/Kasa/BarKod';
+      const pubTopic = 'projekatkasa/kasa/brisanje';
       final builder = mqttClient.MqttClientPayloadBuilder();
       builder.addString(_scanBarcode);
 
