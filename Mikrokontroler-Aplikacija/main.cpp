@@ -19,9 +19,9 @@
 #define ZAKLJUCI 3
 #define UNOS 4
 #define BRISANJE 5
-#define TEMAKUPOVINA "kasa/kod"
-#define TEMAUNOS "kasa/unos"
-#define TEMABRISANJE "kasa/brisanje"
+#define TEMAKUPOVINA "projekatkasa/kasa/kod"
+#define TEMAUNOS "projekatkasa/kasa/unos"
+#define TEMABRISANJE "projekatkasa/kasa/brisanje"
 
 TS_StateTypeDef TS_State = { 0 };
 char mod=POCETNO;
