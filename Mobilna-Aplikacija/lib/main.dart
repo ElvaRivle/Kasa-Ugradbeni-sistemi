@@ -262,7 +262,7 @@ class InsertModeState extends State<InsertModeWidget> {
 
       String pubTopic = 'projekatkasa/kasa/unos';
       final builder = mqttClient.MqttClientPayloadBuilder();
-      builder.addString('${textController.text},${priceController.text},$_scanBarcode');
+      builder.addString('$_scanBarcode,${textController.text},${priceController.text}');
       /// Subscribe to it
       widget.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
       /// Publish it
