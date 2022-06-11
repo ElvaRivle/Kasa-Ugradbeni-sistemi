@@ -70,11 +70,17 @@ typedef struct Artikal {
 
 class Kasa {
     Stanje aktivnoStanje = Stanje::Pocetno;
-    Artikal* artikli = new Artikal[100];
-    
+    Artikal *artikli = new Artikal[100];
+
+    Kasa(){}
     
 public:
-    friend void messageArrived_kodKupovina(MQTT::MessageData&);
+    static Kasa& daj_instancu() {
+        static Kasa singleton = Kasa();
+        return singleton;
+    }
+
+    friend void mqtt_stigao_artikal(MQTT::MessageData&);
 
     ~Kasa() {
         delete[] artikli;
@@ -233,8 +239,10 @@ void messageArrived_kodKupovina(MQTT::MessageData& md)
     }
 }
 
-void messageArrived_artikal(MQTT::MessageData& md)
+void mqtt_stigao_artikal(MQTT::MessageData& md)
 {
+    Kasa kasa = Kasa::daj_instancu();
+    kasa.aktivnoStanje = Stanje::Pocetno;
     if(mod==UNOS){
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_MAGENTA);
@@ -296,6 +304,8 @@ void messageArrived_kodBrisanje(MQTT::MessageData& md)
 
 int main() {
 
+    Kasa kasa = Kasa::daj_instancu();
+
     NetworkInterface *network;
     network = NetworkInterface::get_default_instance();
 
@@ -331,7 +341,7 @@ int main() {
         printf("Subscribed to %s\r\n", TEMAKUPOVINA);
 
 
-    if ((rc = client.subscribe(TEMAUNOS, MQTT::QOS0, messageArrived_artikal)) != 0)
+    if ((rc = client.subscribe(TEMAUNOS, MQTT::QOS0, mqtt_stigao_artikal)) != 0)
         printf("rc from MQTT subscribe is %d\r\n", rc);
     else
         printf("Subscribed to %s\r\n", TEMAUNOS);
@@ -346,7 +356,7 @@ int main() {
 
     while (1) {
         rc = client.subscribe(TEMAKUPOVINA, MQTT::QOS0, messageArrived_kodKupovina);
-        rc = client.subscribe(TEMAUNOS, MQTT::QOS0, messageArrived_artikal);
+        rc = client.subscribe(TEMAUNOS, MQTT::QOS0, mqtt_stigao_artikal);
         rc = client.subscribe(TEMABRISANJE, MQTT::QOS0, messageArrived_kodBrisanje);
         
         if(mod==POCETNO) {
