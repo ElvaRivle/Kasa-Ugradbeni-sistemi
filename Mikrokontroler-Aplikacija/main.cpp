@@ -23,6 +23,7 @@
 #define TEMAUNOS "projekatkasa/kasa/unos"
 #define TEMABRISANJE "projekatkasa/kasa/brisanje"
 
+
 TS_StateTypeDef TS_State = { 0 };
 char mod=POCETNO;
 InterruptIn btn0(BUTTON1);
@@ -35,6 +36,51 @@ std::map<std::string,std::pair<std::string,int> >::iterator it;
 
 int arrivedcount = 0;
 std::string str;
+
+enum class Stanje {
+    Pocetno,
+    Skeniranje,
+    Placanje,
+    Zakljucivanje,
+    Unos,
+    Brisanje
+};
+
+typedef struct Artikal {
+    std::string barkod, naziv;
+    double cijena = 0.;
+    
+    Artikal() {
+        barkod = "";
+        naziv = "";
+    }
+    
+    Artikal(std::string _barkod, std::string _naziv, double _cijena) {
+        barkod = _barkod;
+        naziv = _naziv;
+        cijena = _cijena;
+    }
+    
+    ~Artikal() {
+        barkod = naziv = "";
+        cijena = 0.;
+    }
+    
+} Artikal;
+
+class Kasa {
+    Stanje aktivnoStanje = Stanje::Pocetno;
+    Artikal* artikli = new Artikal[100];
+    
+    
+public:
+    friend void messageArrived_kodKupovina(MQTT::MessageData&);
+
+    ~Kasa() {
+        delete[] artikli;
+        artikli = nullptr;
+    }
+};
 
 void pocetno(){
     mod=POCETNO;
