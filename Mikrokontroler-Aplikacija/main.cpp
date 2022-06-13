@@ -30,7 +30,6 @@ enum Stanja {
 };
 
 
-TS_StateTypeDef TS_State = { 0 };
 InterruptIn nazadNaPocetno(BUTTON1);
 InterruptIn taster_p5(p5);
 InterruptIn taster_p6(p6);
@@ -43,6 +42,7 @@ PwmOut ledice[5] = {p10, p11, p12, p13, p14};
 float iznosRacuna=0;
 float kolicinaArtikla = 1.;
 char trenutnoStanje=POCETNO;
+
 //ne moze iz interrupta refreshovati ekran
 //vec ce taj interrupt ovaj int postaviti na +-1
 //pa ce se u mainu pozvati refresh ekrana
@@ -65,6 +65,8 @@ std::vector<Artikal> sviArtikli;
 Artikal skeniraniArtikal;
 
 
+//neke funkcije je potrebno naznaciti da postoje
+//prije nego sto se definisu
 void kupovina_stanje();
 void brisanje_stanje();
 void unos_stanje();
@@ -72,10 +74,13 @@ void brisanje_stanje();
 void placanje_stanje();
 void gasi_ledice();
 
+
 void pocetno_stanje(){
     taster_p5.fall(&kupovina_stanje);
     taster_p6.fall(&brisanje_stanje);
     taster_p7.fall(&unos_stanje);
+    
+    //reset ledica od proslog racuna
     gasi_ledice();
     
     trenutnoStanje=POCETNO;
@@ -124,6 +129,9 @@ void pocetno_stanje(){
     BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
     BSP_LCD_DrawHLine(0,120,BSP_LCD_GetXSize());
     
+    BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+    BSP_LCD_DrawHLine(0,160,BSP_LCD_GetXSize());
+    
     
     BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
     BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
@@ -133,13 +141,13 @@ void pocetno_stanje(){
 }
 
 void povecaj_kolicinu() {
-    //if (trenutnoStanje != KUPOVINA) return;
+    if (trenutnoStanje != KUPOVINA) return;
     promijenjenaKolicina = 1;
     kolicinaArtikla += 1.f;
 }
 
 void smanji_kolicinu() {
-    //if (trenutnoStanje != KUPOVINA) return;
+    if (trenutnoStanje != KUPOVINA) return;
     promijenjenaKolicina = -1;
     kolicinaArtikla -= 1.f;
     if (kolicinaArtikla < 0.) {
@@ -148,17 +156,18 @@ void smanji_kolicinu() {
 }
 
 void decimalno_povecaj_kolicinu() {
-    //if (trenutnoStanje != KUPOVINA) return;
+    if (trenutnoStanje != KUPOVINA) return;
     kolicinaArtikla += potenciometar;
     promijenjenaKolicina = 1;
 }
 
 void decimalno_smanji_kolicinu() {
-    //if (trenutnoStanje != KUPOVINA) return;
+    if (trenutnoStanje != KUPOVINA) return;
     kolicinaArtikla -= potenciometar;
     promijenjenaKolicina = -1;
 }
 
+//stanje u kojem se skeniraju artikli kupca
 void kupovina_stanje(){
     if(trenutnoStanje == POCETNO){
         trenutnoStanje=KUPOVINA;
@@ -172,14 +181,16 @@ void kupovina_stanje(){
         iznosRacuna=0;
         kolicinaArtikla = 1;
         std::string temp="Skenirajte artikal!";
+        
         BSP_LCD_Clear(LCD_COLOR_LIGHTGRAY);
         BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
         BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
         BSP_LCD_DisplayStringAt(0, 5, (uint8_t *)"Kupovina", CENTER_MODE);
         BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)temp.c_str(), CENTER_MODE);
+        
         printf("Dostupni: \n");
         for(char i = 0; i < sviArtikli.size(); ++i){
-            printf("%s\n", sviArtikli.at(i).naziv.c_str());
+            printf("%s - %s\n", sviArtikli.at(i).barkod.c_str(), sviArtikli.at(i).naziv.c_str());
         }
     }
     //u slucaju povecavanja/smanjivanja kolicine ovaj uslov ce biti ispunjen
@@ -199,11 +210,13 @@ void kupovina_stanje(){
     }
 }
 
+//stanje kada se racun zakljucuje i prikazuje se finalni iznos racuna
 void placanje_stanje() {
     if(trenutnoStanje==KUPOVINA){
         trenutnoStanje=PLACANJE;
         iznosRacuna += skeniraniArtikal.cijena * kolicinaArtikla;
         std::string temp = std::to_string(iznosRacuna).substr(0, 5) + " KM";
+        
         BSP_LCD_Clear(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
@@ -214,6 +227,7 @@ void placanje_stanje() {
     }
 }
 
+//stanje gdje korisnik unosi nove artikle
 void unos_stanje(){
     if(trenutnoStanje != UNOS){
         trenutnoStanje=UNOS;
@@ -224,6 +238,7 @@ void unos_stanje(){
     }
 }
 
+//stanje gdje korisnik brise postojece artikle
 void brisanje_stanje(){
     if(trenutnoStanje!=BRISANJE){
         trenutnoStanje=BRISANJE;
@@ -244,6 +259,7 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
         BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
         BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
         BSP_LCD_DisplayStringAt(0, 5, (uint8_t *)"Kupovina", CENTER_MODE);
+        
         MQTT::Message& message = md.message;
 
         std::string payload = (char*)message.payload;
@@ -291,6 +307,7 @@ void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Unos artikala", CENTER_MODE);
+        
         MQTT::Message& message = md.message;
 
         std::string payload =(char*)message.payload;
@@ -299,10 +316,13 @@ void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
         std::string naziv;
         float cijena;
         int i=0;
+        
         while(payload[i]!=',') kod+=payload[i++];
         i++;
+        
         while(payload[i]!=',') naziv+=payload[i++];
         i++;
+        
         cijena = stof(payload.substr(i));
         
         bool vecPostoji = false;
@@ -321,12 +341,16 @@ void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
             noviArtikal.cijena = cijena;
             
             sviArtikli.push_back(noviArtikal);
+            
+            BSP_LCD_DisplayStringAt(0, 40, (uint8_t *)"Unijeli ste artikal:", CENTER_MODE);
+            BSP_LCD_DisplayStringAt(0, 70, (uint8_t *)kod.c_str(), CENTER_MODE);
+            BSP_LCD_DisplayStringAt(0, 90, (uint8_t *)naziv.c_str(), CENTER_MODE);
+            BSP_LCD_DisplayStringAt(0, 110, (uint8_t *)std::to_string(cijena).substr(0,5).c_str(), CENTER_MODE);
         }
-        
-        BSP_LCD_DisplayStringAt(0, 40, (uint8_t *)"Unijeli ste artikal:", CENTER_MODE);
-        BSP_LCD_DisplayStringAt(0, 70, (uint8_t *)kod.c_str(), CENTER_MODE);
-        BSP_LCD_DisplayStringAt(0, 90, (uint8_t *)naziv.c_str(), CENTER_MODE);
-        BSP_LCD_DisplayStringAt(0, 110, (uint8_t *)std::to_string(cijena).substr(0,5).c_str(), CENTER_MODE);
+        else {
+            //BSP_LCD_DisplayStringAt(0, 40, (uint8_t *)"                     ", CENTER_MODE);
+            BSP_LCD_DisplayStringAt(0, 40, (uint8_t *)"Artikal vec postoji!", CENTER_MODE);
+        }
     }
 }
 
@@ -364,6 +388,13 @@ void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
 
 }
 
+
+//svako 20KM na racunu pali se jedna ledica
+//dok sljedeca ledica se pali onoliko duty-cycle koliko ima do sljedecih 20KM
+//npr 30KM racun
+//pali se prva ledica
+//i druga je na 50%
+//jer je 30 = 20 + 10, 10 = 20*0.5
 void pali_ledice() {
     
     char kolikoLedicaSkrozUpaliti = iznosRacuna / 20;
