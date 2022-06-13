@@ -96,7 +96,7 @@ void pocetno_stanje(){
     BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
     BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
     BSP_LCD_SetFont(&Font16);
-    BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Odaberite opciju:", CENTER_MODE);
+    BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Odaberite opciju:", CENTER_MODE);
     
     
     
@@ -190,7 +190,7 @@ void kupovina_stanje(){
         
         iznosRacuna=0;
         kolicinaArtikla = 1;
-        std::string temp="Skenirajte artikal!";
+        std::string temp="Skenirajte artikal";
         
         BSP_LCD_Clear(LCD_COLOR_LIGHTGRAY);
         
@@ -199,7 +199,7 @@ void kupovina_stanje(){
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetFont(&Font16);
-        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Kupovina", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Kupovina", CENTER_MODE);
         
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_DrawHLine(0,40,BSP_LCD_GetXSize());
@@ -240,7 +240,7 @@ void placanje_stanje() {
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetFont(&Font16);
-        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Placanje", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Placanje", CENTER_MODE);
         
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_DrawHLine(0,40,BSP_LCD_GetXSize());
@@ -268,10 +268,15 @@ void unos_stanje(){
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetFont(&Font16);
-        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Unos artikala", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Unos artikala", CENTER_MODE);
         
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_DrawHLine(0,40,BSP_LCD_GetXSize());
+        
+        BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+        BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
+        
+        BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)"Skenirajte artikal", CENTER_MODE);
     }
 }
 
@@ -287,10 +292,15 @@ void brisanje_stanje(){
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetFont(&Font16);
-        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Brisanje artikala", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Brisanje artikala", CENTER_MODE);
         
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_DrawHLine(0,40,BSP_LCD_GetXSize());
+        
+        BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+        BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
+        
+        BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)"Skenirajte artikal", CENTER_MODE);
     }
 }
 
@@ -318,7 +328,7 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetFont(&Font16);
-        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Kupovina", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Kupovina", CENTER_MODE);
         
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_DrawHLine(0,40,BSP_LCD_GetXSize());
@@ -371,6 +381,8 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
 void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
 {
     if(trenutnoStanje==UNOS){
+        beep(1000.0, 0.5, 0.1, 0);
+        
         BSP_LCD_Clear(LCD_COLOR_LIGHTGRAY);
     
         BSP_LCD_SetTextColor(LCD_COLOR_DARKGRAY);
@@ -378,7 +390,7 @@ void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetFont(&Font16);
-        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Unos artikala", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Unos artikala", CENTER_MODE);
         
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_DrawHLine(0,40,BSP_LCD_GetXSize());
@@ -438,6 +450,8 @@ void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
 void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
 {
     if(trenutnoStanje==BRISANJE){
+        beep(1000.0, 0.5, 0.1, 0);
+        
         BSP_LCD_Clear(LCD_COLOR_LIGHTGRAY);
     
         BSP_LCD_SetTextColor(LCD_COLOR_DARKGRAY);
@@ -445,7 +459,7 @@ void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetFont(&Font16);
-        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Brisanje artikala", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Brisanje artikala", CENTER_MODE);
         
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_DrawHLine(0,40,BSP_LCD_GetXSize());
