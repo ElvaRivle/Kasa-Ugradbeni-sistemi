@@ -219,6 +219,7 @@ void unos_stanje(){
         trenutnoStanje=UNOS;
         BSP_LCD_Clear(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+        BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Unos artikala", CENTER_MODE);
     }
 }
@@ -228,6 +229,7 @@ void brisanje_stanje(){
         trenutnoStanje=BRISANJE;
         BSP_LCD_Clear(LCD_COLOR_DARKGRAY);
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+        BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Brisanje artikala", CENTER_MODE);
     }
 }
@@ -285,11 +287,9 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
 void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
 {
     if(trenutnoStanje==UNOS){
-        BSP_LCD_Clear(LCD_COLOR_WHITE);
-        BSP_LCD_SetTextColor(LCD_COLOR_MAGENTA);
-        BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
-        BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-        BSP_LCD_SetBackColor(LCD_COLOR_MAGENTA);
+        BSP_LCD_Clear(LCD_COLOR_DARKGRAY);
+        BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+        BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Unos artikala", CENTER_MODE);
         MQTT::Message& message = md.message;
 
@@ -297,7 +297,7 @@ void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
         payload.resize(message.payloadlen);
         std::string kod;
         std::string naziv;
-        int cijena;
+        float cijena;
         int i=0;
         while(payload[i]!=',') kod+=payload[i++];
         i++;
@@ -323,20 +323,20 @@ void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
             sviArtikli.push_back(noviArtikal);
         }
         
-        BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)"Unijeli ste artikal:", CENTER_MODE);
-        BSP_LCD_DisplayStringAt(0, 50, (uint8_t *)naziv.c_str(), CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 40, (uint8_t *)"Unijeli ste artikal:", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 70, (uint8_t *)kod.c_str(), CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 90, (uint8_t *)naziv.c_str(), CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 110, (uint8_t *)std::to_string(cijena).substr(0,5).c_str(), CENTER_MODE);
     }
 }
 
 void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
 {
     if(trenutnoStanje==BRISANJE){
-        BSP_LCD_Clear(LCD_COLOR_WHITE);
-        BSP_LCD_SetTextColor(LCD_COLOR_RED);
-        BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
-        BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-        BSP_LCD_SetBackColor(LCD_COLOR_RED);
-        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Brisanje artikla", CENTER_MODE);
+        BSP_LCD_Clear(LCD_COLOR_DARKGRAY);
+        BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+        BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
+        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Brisanje artikala", CENTER_MODE);
         MQTT::Message& message = md.message;
 
         std::string payload=(char*)message.payload;
@@ -354,7 +354,7 @@ void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
         
         if (postoji) {
             BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)"Obrisali ste artikal:", CENTER_MODE);
-            BSP_LCD_DisplayStringAt(0, 50, (uint8_t *)(*(sviArtikli.begin() + offset)).naziv.c_str(), CENTER_MODE);
+            BSP_LCD_DisplayStringAt(0, 70, (uint8_t *)(*(sviArtikli.begin() + offset)).naziv.c_str(), CENTER_MODE);
             sviArtikli.erase(sviArtikli.begin() + offset);
         }
         else{
