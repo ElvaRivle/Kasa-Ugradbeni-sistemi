@@ -1,46 +1,55 @@
 #include "mbed.h"
 #include "stm32f413h_discovery_lcd.h"
-#include <string>
-#include <map>
-#include <utility>
 #include "MQTTNetwork.h"
 #include "MQTTmbed.h"
 #include "MQTTClient.h"
-#include <iostream>
 #include "stm32f413h_discovery_ts.h"
 #include "stm32f413h_discovery_lcd.h"
 
 
-#define MQTT_CLIENT_NAME "kasa"
-#define MQTTCLIENT_QOS2 0
-#define POCETNO 0
-#define SKENIRANJE 1
-#define PLACANJE 2
-#define ZAKLJUCI 3
-#define UNOS 4
-#define BRISANJE 5
+#include <vector>
+#include <string>
+
+
+#define MQTT_CLIENT_NAME "US_Projekat_Kasa_MBED"
 #define TEMAKUPOVINA "projekatkasa/kasa/kod"
 #define TEMAUNOS "projekatkasa/kasa/unos"
 #define TEMABRISANJE "projekatkasa/kasa/brisanje"
 
+enum Stanja {
+    POCETNO = 0,
+    SKENIRANJE,
+    PLACANJE,
+    UNOS,
+    BRISANJE
+};
+
+
 TS_StateTypeDef TS_State = { 0 };
-char mod=POCETNO;
 InterruptIn btn0(BUTTON1);
-unsigned int total=0;
-std::string poruka1="Ukupno: ";
-std::string poruka2="Uplatiti: ";
-std::string poruka3="Obrisali ste: ";
-std::map<std::string,std::pair<std::string,int> > artikli;
-std::map<std::string,std::pair<std::string,int> >::iterator it;
 
-int arrivedcount = 0;
-std::string str;
+float iznosRacuna=0;
+char trenutnoStanje=POCETNO;
 
-void pocetno(){
-    mod=POCETNO;
-    total=0;
+typedef struct Artikal {
+    std::string barkod, naziv;
+    float cijena;
+    
+    Artikal(std::string _barkod = "", std::string _naziv = "", float _cijena = 0.) {
+        barkod = _barkod;
+        naziv = _naziv;
+        cijena = _cijena;
+    }
+    
+} Artikal;
 
-   BSP_LCD_Clear(LCD_COLOR_WHITE);
+std::vector<Artikal> sviArtikli;
+
+void pocetno_stanje(){
+    trenutnoStanje=POCETNO;
+    iznosRacuna=0;
+
+    BSP_LCD_Clear(LCD_COLOR_WHITE);
 
     BSP_LCD_SetTextColor(LCD_COLOR_GREEN);
     BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), 40);
@@ -50,13 +59,18 @@ void pocetno(){
     BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Odaberite opciju", CENTER_MODE);
     
     
+    
+    
     BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
     BSP_LCD_FillRect(0, 40, BSP_LCD_GetXSize(), 40);
-    BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
     BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
     BSP_LCD_SetFont(&Font16);
     BSP_LCD_DisplayStringAt(0, 55, (uint8_t *)"Kupovina", CENTER_MODE);
     
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_DrawHLine(0,40,BSP_LCD_GetXSize());
+    BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
     
     BSP_LCD_SetTextColor(LCD_COLOR_RED);
     BSP_LCD_FillRect(0, 80, BSP_LCD_GetXSize(), 40);
@@ -64,6 +78,10 @@ void pocetno(){
     BSP_LCD_SetBackColor(LCD_COLOR_RED);
     BSP_LCD_SetFont(&Font16);
     BSP_LCD_DisplayStringAt(0, 95, (uint8_t *)"Brisanje artikla", CENTER_MODE);
+    
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_DrawHLine(0,80,BSP_LCD_GetXSize());
+    BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
     
     BSP_LCD_SetTextColor(LCD_COLOR_MAGENTA);
     BSP_LCD_FillRect(0, 120, BSP_LCD_GetXSize(), 40);
@@ -73,6 +91,11 @@ void pocetno(){
     BSP_LCD_DisplayStringAt(0, 135, (uint8_t *)"Unos artikla", CENTER_MODE);
     
     
+    BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+    BSP_LCD_DrawHLine(0,120,BSP_LCD_GetXSize());
+    BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+    
+    
     BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
     BSP_LCD_SetBackColor(LCD_COLOR_WHITE);
     BSP_LCD_SetFont(&Font16);
@@ -80,48 +103,43 @@ void pocetno(){
     BSP_LCD_DisplayStringAt(0, 210, (uint8_t *)"Elvir - Vedad - Tarik", CENTER_MODE);
 }
 
-void kupi(){
-    if(mod!=SKENIRANJE && mod!=PLACANJE && mod!=ZAKLJUCI){
-        total=0;
-        mod=SKENIRANJE;
-        poruka1="Ukupno: " + std::to_string(total)+ " KM";
+void kupovina_stanje(){
+    if(trenutnoStanje == POCETNO){
+        iznosRacuna=0;
+        trenutnoStanje=SKENIRANJE;
+        std::string temp="Ukupno: " + std::to_string(iznosRacuna)+ " KM";
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
-        BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
+        BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
         BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Kupovina", CENTER_MODE);
-        BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)poruka1.c_str(), LEFT_MODE);
-        std::cout<<"Dostupni: "<<std::endl;
-        for(std::map<std::string,std::pair<std::string,int> >::iterator it=artikli.begin();it!=artikli.end();it++){
-            std::cout<<(*it).first<<std::endl;
+        BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)temp.c_str(), LEFT_MODE);
+        printf("Dostupni: \n");
+        for(char i = 0; i < sviArtikli.size(); ++i){
+            printf("%s\n", sviArtikli.at(i).barkod.c_str());
         }
-        
-    
-
-    }
-    else if(mod==SKENIRANJE){
-        mod=PLACANJE;
-        poruka2+=std::to_string(total);
-        poruka2+=" KM";
-        BSP_LCD_Clear(LCD_COLOR_WHITE);
-        BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
-        BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
-        BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
-        BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
-        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Zakljucivanje racuna", CENTER_MODE);
-        BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)poruka2.c_str(), CENTER_MODE);
-        poruka2="Uplatiti ";
-    }
-    else if(mod==PLACANJE){
-        mod=POCETNO;
-        kupi();
     }
 }
 
-void unesi(){
-    if(mod!=UNOS){
-        mod=UNOS;
+void placanje_stanje() {
+    if(trenutnoStanje==SKENIRANJE){
+        trenutnoStanje=PLACANJE;
+        std::string temp = "Uplatiti: " + std::to_string(iznosRacuna);
+        temp += " KM";
+        BSP_LCD_Clear(LCD_COLOR_WHITE);
+        BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
+        BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
+        BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
+        BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
+        BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Zakljucivanje racuna", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)temp.c_str(), CENTER_MODE);
+    }
+}
+
+void unos_stanje(){
+    if(trenutnoStanje != UNOS){
+        trenutnoStanje=UNOS;
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_MAGENTA);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
@@ -129,15 +147,11 @@ void unesi(){
         BSP_LCD_SetBackColor(LCD_COLOR_MAGENTA);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Unos artikala", CENTER_MODE);
     }
-    else{
-        pocetno();
-    }
-
 }
 
-void obrisi(){
-    if(mod!=BRISANJE){
-        mod=BRISANJE;
+void brisanje_stanje(){
+    if(trenutnoStanje!=BRISANJE){
+        trenutnoStanje=BRISANJE;
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_RED);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
@@ -145,14 +159,11 @@ void obrisi(){
         BSP_LCD_SetBackColor(LCD_COLOR_RED);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Brisanje artikla", CENTER_MODE);
     }
-    else{
-        pocetno();
-    }
 }
 
-void messageArrived_kodKupovina(MQTT::MessageData& md)
+void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
 {
-    if(mod==SKENIRANJE){
+    if(trenutnoStanje==SKENIRANJE){
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
@@ -160,24 +171,31 @@ void messageArrived_kodKupovina(MQTT::MessageData& md)
         BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Kupovina", CENTER_MODE);
         MQTT::Message& message = md.message;
-        printf("Message arrived: qos %d, retained %d, dup %d, packetid %d\r\n", message.qos, message.retained, message.dup, message.id);
-        printf("Payload %.*s\r\n", message.payloadlen, (char*)message.payload);
-        ++arrivedcount;
-        str=(char*)message.payload;
-        str.resize(message.payloadlen);
 
-        it=artikli.find(str);
-
-        if(it!=artikli.end()){
-                std::string art=(*it).second.first+", cijena: "+std::to_string((*it).second.second)+" KM";
+        std::string payload = (char*)message.payload;
+        payload.resize(message.payloadlen);
+        
+        bool nadjen = false;
+        
+        std::string ispis;
+        
+        for (char i = 0; i < sviArtikli.size(); ++i) {
+            Artikal temp = sviArtikli.at(i);
+            if (payload == temp.barkod) {
+                nadjen = true;
+                std::string art=temp.naziv+", cijena: "+std::to_string(temp.cijena)+" KM";
                 BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) art.c_str(), CENTER_MODE);
-                total+=(*it).second.second;
-                poruka1="Ukupno: " + std::to_string(total)+ " KM";
+                iznosRacuna+=sviArtikli.at(i).cijena;
+                ispis = "Ukupno: " + std::to_string(iznosRacuna)+ " KM";
+                break;
+            }
         }
-        else{
+        
+        if (!nadjen) {
             BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)"Nepostojeci artikal", CENTER_MODE);
         }
-        BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)poruka1.c_str(), LEFT_MODE);
+        
+        BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)ispis.c_str(), LEFT_MODE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
         BSP_LCD_FillRect(0, BSP_LCD_GetYSize()-40, BSP_LCD_GetXSize(), 40);
         BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
@@ -187,9 +205,9 @@ void messageArrived_kodKupovina(MQTT::MessageData& md)
     }
 }
 
-void messageArrived_artikal(MQTT::MessageData& md)
+void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
 {
-    if(mod==UNOS){
+    if(trenutnoStanje==UNOS){
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_MAGENTA);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
@@ -197,31 +215,45 @@ void messageArrived_artikal(MQTT::MessageData& md)
         BSP_LCD_SetBackColor(LCD_COLOR_MAGENTA);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Unos artikala", CENTER_MODE);
         MQTT::Message& message = md.message;
-        printf("Message arrived: qos %d, retained %d, dup %d, packetid %d\r\n", message.qos, message.retained, message.dup, message.id);
-        printf("Payload %.*s\r\n", message.payloadlen, (char*)message.payload);
-        ++arrivedcount;
-        str=(char*)message.payload;
-        str.resize(message.payloadlen);
+
+        std::string payload =(char*)message.payload;
+        payload.resize(message.payloadlen);
         std::string kod;
         std::string naziv;
         int cijena;
         int i=0;
-        while(str[i]!=',') kod+=str[i++];
+        while(payload[i]!=',') kod+=payload[i++];
         i++;
-        while(str[i]!=',') naziv+=str[i++];
+        while(payload[i]!=',') naziv+=payload[i++];
         i++;
-        cijena = stoi(str.substr(i));
-
+        cijena = stof(payload.substr(i));
+        
+        bool vecPostoji = false;
+        
+        for (char i = 0; i < sviArtikli.size(); ++i) {
+            if (sviArtikli.at(i).barkod == kod) {
+                vecPostoji = true;
+                break;
+            }
+        }
+        
+        if (!vecPostoji) {
+            Artikal noviArtikal;
+            noviArtikal.barkod = kod;
+            noviArtikal.naziv = naziv;
+            noviArtikal.cijena = cijena;
+            
+            sviArtikli.push_back(noviArtikal);
+        }
+        
         BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)"Unijeli ste artikal:", CENTER_MODE);
         BSP_LCD_DisplayStringAt(0, 50, (uint8_t *)naziv.c_str(), CENTER_MODE);
-        artikli[kod]=std::pair<std::string,int>(naziv,cijena);
-
     }
 }
 
-void messageArrived_kodBrisanje(MQTT::MessageData& md)
+void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
 {
-    if(mod==BRISANJE){
+    if(trenutnoStanje==BRISANJE){
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_RED);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
@@ -229,17 +261,24 @@ void messageArrived_kodBrisanje(MQTT::MessageData& md)
         BSP_LCD_SetBackColor(LCD_COLOR_RED);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Brisanje artikla", CENTER_MODE);
         MQTT::Message& message = md.message;
-        printf("Message arrived: qos %d, retained %d, dup %d, packetid %d\r\n", message.qos, message.retained, message.dup, message.id);
-        printf("Payload %.*s\r\n", message.payloadlen, (char*)message.payload);
-        ++arrivedcount;
-        str=(char*)message.payload;
-        str.resize(message.payloadlen);
-        it=artikli.find(str);
 
-        if(it!=artikli.end()){
+        std::string payload=(char*)message.payload;
+        payload.resize(message.payloadlen);
+        
+        char offset = 0;
+        bool postoji = false;
+        
+        for (; offset < sviArtikli.size(); ++offset) {
+            if (sviArtikli.at(offset).barkod == payload) {
+                postoji = true;
+                break;
+            }
+        }
+        
+        if (postoji) {
             BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)"Obrisali ste artikal:", CENTER_MODE);
-            BSP_LCD_DisplayStringAt(0, 50, (uint8_t *)(*it).second.first.c_str(), CENTER_MODE);
-            artikli.erase(str);
+            BSP_LCD_DisplayStringAt(0, 50, (uint8_t *)(*(sviArtikli.begin() + offset)).naziv.c_str(), CENTER_MODE);
+            sviArtikli.erase(sviArtikli.begin() + offset);
         }
         else{
             BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)"Nepostojeci artikal", CENTER_MODE);
@@ -257,8 +296,6 @@ int main() {
         return -1;
     }
     MQTTNetwork mqttNetwork(network);
-
-    BSP_LCD_Init();
 
     MQTT::Client<MQTTNetwork, Countdown> client(mqttNetwork);
 
@@ -279,31 +316,36 @@ int main() {
     if ((rc = client.connect(data)) != 0)
         printf("rc from MQTT connect is %d\r\n", rc);
 
-    if ((rc = client.subscribe(TEMAKUPOVINA, MQTT::QOS0, messageArrived_kodKupovina)) != 0)
+    if ((rc = client.subscribe(TEMAKUPOVINA, MQTT::QOS0, mqtt_stigao_skenirani_artikal)) != 0)
         printf("rc from MQTT subscribe is %d\r\n", rc);
     else
         printf("Subscribed to %s\r\n", TEMAKUPOVINA);
 
 
-    if ((rc = client.subscribe(TEMAUNOS, MQTT::QOS0, messageArrived_artikal)) != 0)
+    if ((rc = client.subscribe(TEMAUNOS, MQTT::QOS0, mqtt_stigao_novi_artikal)) != 0)
         printf("rc from MQTT subscribe is %d\r\n", rc);
     else
         printf("Subscribed to %s\r\n", TEMAUNOS);
 
-    if ((rc = client.subscribe(TEMABRISANJE, MQTT::QOS0, messageArrived_kodBrisanje)) != 0)
+    if ((rc = client.subscribe(TEMABRISANJE, MQTT::QOS0, mqtt_stigao_barkod_za_brisanje)) != 0)
         printf("rc from MQTT subscribe is %d\r\n", rc);
     else
         printf("Subscribed to %s\r\n", TEMABRISANJE);
+        
+        
+        
+    BSP_LCD_Init();
+    
 
-    pocetno();
-    btn0.rise(&pocetno);
+    pocetno_stanje();
+    btn0.fall(&pocetno_stanje);
 
     while (1) {
-        rc = client.subscribe(TEMAKUPOVINA, MQTT::QOS0, messageArrived_kodKupovina);
-        rc = client.subscribe(TEMAUNOS, MQTT::QOS0, messageArrived_artikal);
-        rc = client.subscribe(TEMABRISANJE, MQTT::QOS0, messageArrived_kodBrisanje);
+        rc = client.subscribe(TEMAKUPOVINA, MQTT::QOS0, mqtt_stigao_skenirani_artikal);
+        rc = client.subscribe(TEMAUNOS, MQTT::QOS0, mqtt_stigao_novi_artikal);
+        rc = client.subscribe(TEMABRISANJE, MQTT::QOS0, mqtt_stigao_barkod_za_brisanje);
         
-        if(mod==POCETNO) {
+        if(trenutnoStanje==POCETNO) {
            BSP_TS_GetState(&TS_State);
             if(TS_State.touchDetected) {
                 
@@ -311,22 +353,22 @@ int main() {
                 uint16_t y1 = TS_State.touchY[0];
     
                 if((unsigned int)y1<=80 && (unsigned int)y1>40) 
-                    kupi();
+                    kupovina_stanje();
                 if((unsigned int)y1>80 && (unsigned int)y1<=120) 
-                    obrisi();
+                    brisanje_stanje();
                 if((unsigned int)y1>120 && (unsigned int)y1<=160) 
-                    unesi();
+                    unos_stanje();
                 
             }
 
         }
-        else if(mod==SKENIRANJE) {
+        else if(trenutnoStanje==SKENIRANJE) {
             BSP_TS_GetState(&TS_State);
             uint16_t x1 = TS_State.touchX[0];
             uint16_t y1 = TS_State.touchY[0];
             if(TS_State.touchDetected) 
                 if((unsigned int)y1>=BSP_LCD_GetYSize()-40 && (unsigned int)y1<BSP_LCD_GetYSize()) 
-                    kupi();
+                    placanje_stanje();
         }
         wait_ms(1);
     }
