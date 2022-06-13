@@ -37,6 +37,7 @@ dependencies:
 
   flutter_barcode_scanner: ^2.0.0
   mqtt_client: ^9.6.8
+  flutter_beep: ^1.0.0
 
 dev_dependencies:
   flutter_test:

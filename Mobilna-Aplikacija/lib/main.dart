@@ -5,6 +5,7 @@ import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
+import 'package:flutter_beep/flutter_beep.dart';
 import 'package:mqtt_client/mqtt_server_client.dart' as mqtt;
 import 'package:mqtt_client/mqtt_client.dart' as mqttClient;
 
@@ -162,7 +163,17 @@ class NormalModeState extends State<NormalModeWidget> {
   Future<void> startBarcodeScanStream() async {
     FlutterBarcodeScanner.getBarcodeStreamReceiver(
         '#ff6666', 'Otkazi', true, ScanMode.BARCODE)!
-        .listen((barcode) => {});
+        .listen((barcode) {
+          if (barcode.toString().length > 5) {
+            //sleep(Duration(seconds: 1));
+            FlutterBeep.beep();
+            setState(() {
+              _scanBarcode = barcode.toString();
+              successMessage = "";
+            });
+            SendBarCode();
+          }
+    });
   }
 
   // Platform messages are asynchronous, so we initialize in an async method.
@@ -206,9 +217,9 @@ class NormalModeState extends State<NormalModeWidget> {
                                 scanBarcodeNormal();
                               },
                               child: const Text('Skeniranje pojedinacnih artikala')),
-                          // ElevatedButton(
-                          //     onPressed: () => startBarcodeScanStream(),
-                          //     child: const Text('Neprekidno skeniranje artikala')),
+                          ElevatedButton(
+                              onPressed: () => startBarcodeScanStream(),
+                              child: const Text('Neprekidno skeniranje artikala')),
                           Text('Barkod: $_scanBarcode\n',
                               style: const TextStyle(fontSize: 20)),
                           ElevatedButton(
