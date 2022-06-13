@@ -131,10 +131,15 @@ void pocetno_stanje(){
 
 void povecaj_kolicinu() {
     promijenjenaKolicina = 1;
+    kolicinaArtikla += 1.f;
 }
 
 void smanji_kolicinu() {
     promijenjenaKolicina = -1;
+    kolicinaArtikla -= 1.f;
+    if (kolicinaArtikla < 0.) {
+        kolicinaArtikla = 0.f;    
+    }
 }
 
 void kupovina_stanje(){
@@ -164,9 +169,8 @@ void kupovina_stanje(){
     else if (trenutnoStanje == KUPOVINA && promijenjenaKolicina == 1) {
         BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
         BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) "                      ", LEFT_MODE);
-        std::string temp=skeniraniArtikal.naziv+", cijena: "+std::to_string(skeniraniArtikal.cijena).substr(0, 5)+" KM";
+        std::string temp=skeniraniArtikal.naziv+", cijena: "+std::to_string(skeniraniArtikal.cijena * kolicinaArtikla).substr(0, 5)+" KM";
         BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) temp.c_str(), LEFT_MODE);
-        iznosRacuna+=skeniraniArtikal.cijena;
         temp = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5) + " KM";
         
         BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)temp.c_str(), LEFT_MODE);
@@ -174,9 +178,8 @@ void kupovina_stanje(){
     else if (trenutnoStanje == KUPOVINA && promijenjenaKolicina == -1) {
         BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
         BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) "                      ", LEFT_MODE);
-        std::string temp=skeniraniArtikal.naziv+", cijena: "+std::to_string(skeniraniArtikal.cijena).substr(0, 5)+" KM";
+        std::string temp=skeniraniArtikal.naziv+", cijena: "+std::to_string(skeniraniArtikal.cijena * kolicinaArtikla).substr(0, 5)+" KM";
         BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) temp.c_str(), LEFT_MODE);
-        iznosRacuna-=skeniraniArtikal.cijena;
         temp = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5) + " KM";
         
         BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)temp.c_str(), LEFT_MODE);
@@ -186,6 +189,7 @@ void kupovina_stanje(){
 void placanje_stanje() {
     if(trenutnoStanje==KUPOVINA){
         trenutnoStanje=PLACANJE;
+        iznosRacuna += skeniraniArtikal.cijena * kolicinaArtikla;
         std::string temp = "Uplatiti: " + std::to_string(iznosRacuna).substr(0, 5);
         temp += " KM";
         BSP_LCD_Clear(LCD_COLOR_WHITE);
@@ -225,6 +229,8 @@ void brisanje_stanje(){
 void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
 {
     if(trenutnoStanje==KUPOVINA){
+        iznosRacuna += skeniraniArtikal.cijena * kolicinaArtikla;
+        
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
@@ -247,7 +253,7 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
                 skeniraniArtikal = temp;
                 std::string art=temp.naziv+", cijena: "+std::to_string(temp.cijena).substr(0, 5)+" KM";
                 BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) art.c_str(), CENTER_MODE);
-                iznosRacuna+=sviArtikli.at(i).cijena;
+                //iznosRacuna+=sviArtikli.at(i).cijena;
                 ispis = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5)+ " KM";
                 break;
             }
