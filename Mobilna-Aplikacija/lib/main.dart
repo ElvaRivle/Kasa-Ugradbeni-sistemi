@@ -164,9 +164,10 @@ class NormalModeState extends State<NormalModeWidget> {
     FlutterBarcodeScanner.getBarcodeStreamReceiver(
         '#ff6666', 'Otkazi', true, ScanMode.BARCODE)!
         .listen((barcode) {
-          if (barcode.toString().length > 5) {
+          if (barcode != _scanBarcode && barcode.toString().length > 5 && barcode.toString().length < 15) {
             //sleep(Duration(seconds: 1));
-            FlutterBeep.beep();
+            //FlutterBeep.beep();
+
             setState(() {
               _scanBarcode = barcode.toString();
               successMessage = "";
