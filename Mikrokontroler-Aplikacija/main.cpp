@@ -38,6 +38,7 @@ InterruptIn taster_p7(p7);
 InterruptIn taster_p8(p8);
 InterruptIn taster_p9(p9);
 AnalogIn potenciometar(p20);
+PwmOut ledice[5] = {p10, p11, p12, p13, p14};
 
 float iznosRacuna=0;
 float kolicinaArtikla = 1.;
@@ -69,11 +70,13 @@ void brisanje_stanje();
 void unos_stanje();
 void brisanje_stanje();
 void placanje_stanje();
+void gasi_ledice();
 
 void pocetno_stanje(){
     taster_p5.fall(&kupovina_stanje);
     taster_p6.fall(&brisanje_stanje);
     taster_p7.fall(&unos_stanje);
+    gasi_ledice();
     
     trenutnoStanje=POCETNO;
     iznosRacuna=0;
@@ -167,7 +170,7 @@ void kupovina_stanje(){
         
         iznosRacuna=0;
         kolicinaArtikla = 1;
-        std::string temp="Ukupno: " + std::to_string(iznosRacuna)+ " KM";
+        std::string temp="Ukupno: " + std::to_string(iznosRacuna).substr(0,5)+ " KM";
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
@@ -214,6 +217,8 @@ void placanje_stanje() {
         BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
         BSP_LCD_DisplayStringAt(0, 10, (uint8_t *)"Zakljucivanje racuna", CENTER_MODE);
         BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)temp.c_str(), CENTER_MODE);
+        
+        skeniraniArtikal = Artikal();
     }
 }
 
@@ -245,7 +250,6 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
 {
     if(trenutnoStanje==KUPOVINA){
         iznosRacuna += skeniraniArtikal.cijena * kolicinaArtikla;
-        
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
@@ -371,6 +375,28 @@ void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
 
 }
 
+void pali_ledice() {
+    
+    char kolikoLedicaSkrozUpaliti = iznosRacuna / 20;
+    if (kolikoLedicaSkrozUpaliti > 5) {
+        kolikoLedicaSkrozUpaliti = 5;
+    }
+    
+    for (char i = 0; i < kolikoLedicaSkrozUpaliti; ++i) {
+        ledice[i] = 1.;
+    }
+    
+    char sljedecaLedica = kolikoLedicaSkrozUpaliti;
+    if (sljedecaLedica == 5) return;
+    ledice[sljedecaLedica] = (iznosRacuna - kolikoLedicaSkrozUpaliti*20)/20.;
+}
+
+void gasi_ledice() {
+    for (char i = 0; i < 5; ++i) {
+        ledice[i] = 0.;
+    }
+}
+
 int main() {
     sviArtikli.push_back(testArtikal);
 
@@ -424,17 +450,24 @@ int main() {
 
     pocetno_stanje();
     nazadNaPocetno.fall(&pocetno_stanje);
+    
+    for (char i = 0; i < 5; ++i) {
+        ledice[i].period_ms(200);
+    }
+
 
     while (1) {
         rc = client.subscribe(TEMAKUPOVINA, MQTT::QOS0, mqtt_stigao_skenirani_artikal);
         rc = client.subscribe(TEMAUNOS, MQTT::QOS0, mqtt_stigao_novi_artikal);
         rc = client.subscribe(TEMABRISANJE, MQTT::QOS0, mqtt_stigao_barkod_za_brisanje);
         
+        pali_ledice();
+        
         if (promijenjenaKolicina != 0) {
             kupovina_stanje();
             promijenjenaKolicina = 0;
         }
         
-        wait_ms(5);
+        wait_ms(1);
     }
 }
