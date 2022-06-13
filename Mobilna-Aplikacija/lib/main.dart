@@ -25,7 +25,7 @@ class HomeScreenWidget extends StatelessWidget {
   void _connect() {
     client.useWebSocket = false;
     client.port = 1883;
-    client.logging(on: true);
+    client.logging(on: false);
     client.keepAlivePeriod = 60;
     client.onDisconnected = onDisconnected;
     client.onConnected = onConnected;
