@@ -34,20 +34,20 @@ InterruptIn nazadNaPocetno(BUTTON1);
 InterruptIn taster_p5(p5);
 InterruptIn taster_p6(p6);
 InterruptIn taster_p7(p7);
-InterruptIn taster_p8(p8);
 InterruptIn taster_p9(p9);
 AnalogIn potenciometar(p20);
 PwmOut ledice[5] = {p10, p11, p12, p13, p14};
 PwmOut speaker(p21);
 
 float iznosRacuna=0;
-float kolicinaArtikla = 1.;
+float kolicinaArtikla = 1.f;
+float decimalnaKolicinaArtikla = 0.f;
 char trenutnoStanje=POCETNO;
 
 //ne moze iz interrupta refreshovati ekran
-//vec ce taj interrupt ovaj int postaviti na +-1
+//vec ce taj interrupt ovaj bool postaviti na true
 //pa ce se u mainu pozvati refresh ekrana
-int promijenjenaKolicina = 0;
+bool promijenjenaKolicina = false;
 
 typedef struct Artikal {
     std::string barkod, naziv;
@@ -87,6 +87,7 @@ void pocetno_stanje(){
     trenutnoStanje=POCETNO;
     iznosRacuna=0;
     kolicinaArtikla = 1.f;
+    decimalnaKolicinaArtikla = 0.f;
     skeniraniArtikal = Artikal();
 
     BSP_LCD_Clear(LCD_COLOR_WHITE);
@@ -151,29 +152,23 @@ void pocetno_stanje(){
 
 void povecaj_kolicinu() {
     if (trenutnoStanje != KUPOVINA) return;
-    promijenjenaKolicina = 1;
+    promijenjenaKolicina = true;
     kolicinaArtikla += 1.f;
 }
 
 void smanji_kolicinu() {
     if (trenutnoStanje != KUPOVINA) return;
-    promijenjenaKolicina = -1;
+    promijenjenaKolicina = true;
     kolicinaArtikla -= 1.f;
     if (kolicinaArtikla < 0.) {
         kolicinaArtikla = 0.f;    
     }
 }
 
-void decimalno_povecaj_kolicinu() {
+void decimalno_promijeni_kolicinu() {
     if (trenutnoStanje != KUPOVINA) return;
-    kolicinaArtikla += potenciometar;
-    promijenjenaKolicina = 1;
-}
-
-void decimalno_smanji_kolicinu() {
-    if (trenutnoStanje != KUPOVINA) return;
-    kolicinaArtikla -= potenciometar;
-    promijenjenaKolicina = -1;
+    decimalnaKolicinaArtikla = potenciometar;
+    promijenjenaKolicina = true;
 }
 
 //stanje u kojem se skeniraju artikli kupca
@@ -184,12 +179,12 @@ void kupovina_stanje(){
         
         taster_p5.fall(&povecaj_kolicinu);
         taster_p6.fall(&smanji_kolicinu);
-        taster_p7.fall(&decimalno_povecaj_kolicinu);
-        taster_p8.fall(&decimalno_smanji_kolicinu);
+        taster_p7.fall(&decimalno_promijeni_kolicinu);
         taster_p9.fall(&placanje_stanje);
         
         iznosRacuna=0;
         kolicinaArtikla = 1;
+        decimalnaKolicinaArtikla = 0.f;
         std::string temp="Skenirajte artikal";
         
         BSP_LCD_Clear(LCD_COLOR_LIGHTGRAY);
@@ -210,15 +205,20 @@ void kupovina_stanje(){
         BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)temp.c_str(), CENTER_MODE);
     }
     //u slucaju povecavanja/smanjivanja kolicine ovaj uslov ce biti ispunjen
-    else if (trenutnoStanje == KUPOVINA && promijenjenaKolicina != 0) {
+    else if (trenutnoStanje == KUPOVINA && promijenjenaKolicina != false) {
         BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
         BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
         BSP_LCD_DisplayStringAt(0, 80, (uint8_t *) "                      ", CENTER_MODE);
         BSP_LCD_DisplayStringAt(0, 110, (uint8_t *) "                      ", CENTER_MODE);
         BSP_LCD_DisplayStringAt(0, 160, (uint8_t *) "                      ", LEFT_MODE);
         
-        BSP_LCD_DisplayStringAt(0, 80, (uint8_t*)(std::to_string(skeniraniArtikal.cijena * kolicinaArtikla).substr(0,5) + " KM").c_str(), CENTER_MODE);
-        BSP_LCD_DisplayStringAt(0, 110, (uint8_t*)("Kolicina: " + std::to_string(kolicinaArtikla).substr(0,5)).c_str(), CENTER_MODE);
+        BSP_LCD_DisplayStringAt(
+            0, 
+            80, 
+        (uint8_t*)(std::to_string(skeniraniArtikal.cijena * (kolicinaArtikla + decimalnaKolicinaArtikla)).substr(0,5) + " KM").c_str(),
+        CENTER_MODE);
+        
+        BSP_LCD_DisplayStringAt(0, 110, (uint8_t*)("Kolicina: " + std::to_string(kolicinaArtikla + decimalnaKolicinaArtikla).substr(0,5)).c_str(), CENTER_MODE);
         
         std::string temp = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5) + " KM";
         
@@ -230,7 +230,7 @@ void kupovina_stanje(){
 void placanje_stanje() {
     if(trenutnoStanje==KUPOVINA){
         trenutnoStanje=PLACANJE;
-        iznosRacuna += skeniraniArtikal.cijena * kolicinaArtikla;
+        iznosRacuna += skeniraniArtikal.cijena * (kolicinaArtikla + decimalnaKolicinaArtikla);
         std::string temp = std::to_string(iznosRacuna).substr(0, 5) + " KM";
         
         BSP_LCD_Clear(LCD_COLOR_LIGHTGRAY);
@@ -318,8 +318,9 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
     if(trenutnoStanje==KUPOVINA){
         beep(1000.0, 0.5, 0.1, 0);
         
-        iznosRacuna += skeniraniArtikal.cijena * kolicinaArtikla;
+        iznosRacuna += skeniraniArtikal.cijena * (kolicinaArtikla + decimalnaKolicinaArtikla);
         kolicinaArtikla = 1.f;
+        decimalnaKolicinaArtikla = 0.f;
         
         BSP_LCD_Clear(LCD_COLOR_LIGHTGRAY);
         
@@ -353,7 +354,7 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
                 
                 BSP_LCD_DisplayStringAt(0, 50, (uint8_t*)temp.naziv.c_str(), CENTER_MODE);
                 BSP_LCD_DisplayStringAt(0, 80, (uint8_t*)(std::to_string(temp.cijena).substr(0, 5) + " KM").c_str(), CENTER_MODE);
-                BSP_LCD_DisplayStringAt(0, 110, (uint8_t*)("Kolicina: " + std::to_string(kolicinaArtikla).substr(0, 5)).c_str(), CENTER_MODE);
+                BSP_LCD_DisplayStringAt(0, 110, (uint8_t*)("Kolicina: " + std::to_string(kolicinaArtikla + decimalnaKolicinaArtikla).substr(0, 5)).c_str(), CENTER_MODE);
                 
                 printf("%s - %s\n", temp.barkod.c_str(), temp.naziv.c_str());
 
