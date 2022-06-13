@@ -38,6 +38,7 @@ InterruptIn taster_p8(p8);
 InterruptIn taster_p9(p9);
 AnalogIn potenciometar(p20);
 PwmOut ledice[5] = {p10, p11, p12, p13, p14};
+PwmOut speaker(p21);
 
 float iznosRacuna=0;
 float kolicinaArtikla = 1.;
@@ -138,6 +139,12 @@ void pocetno_stanje(){
     BSP_LCD_SetFont(&Font16);
     BSP_LCD_DisplayStringAt(0, 180, (uint8_t *)"US Projekat", CENTER_MODE);
     BSP_LCD_DisplayStringAt(0, 210, (uint8_t *)"Elvir - Vedad - Tarik", CENTER_MODE);
+    
+    printf("Dostupni artikli: \n");
+    for(char i = 0; i < sviArtikli.size(); ++i){
+        printf("%s - %s\n", sviArtikli.at(i).barkod.c_str(), sviArtikli.at(i).naziv.c_str());
+    }
+    printf("\n\n\n");
 }
 
 void povecaj_kolicinu() {
@@ -171,6 +178,7 @@ void decimalno_smanji_kolicinu() {
 void kupovina_stanje(){
     if(trenutnoStanje == POCETNO){
         trenutnoStanje=KUPOVINA;
+        printf("Skenirani artikli:\n");
         
         taster_p5.fall(&povecaj_kolicinu);
         taster_p6.fall(&smanji_kolicinu);
@@ -187,11 +195,6 @@ void kupovina_stanje(){
         BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
         BSP_LCD_DisplayStringAt(0, 5, (uint8_t *)"Kupovina", CENTER_MODE);
         BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)temp.c_str(), CENTER_MODE);
-        
-        printf("Dostupni: \n");
-        for(char i = 0; i < sviArtikli.size(); ++i){
-            printf("%s - %s\n", sviArtikli.at(i).barkod.c_str(), sviArtikli.at(i).naziv.c_str());
-        }
     }
     //u slucaju povecavanja/smanjivanja kolicine ovaj uslov ce biti ispunjen
     else if (trenutnoStanje == KUPOVINA && promijenjenaKolicina != 0) {
@@ -224,6 +227,8 @@ void placanje_stanje() {
         BSP_LCD_DisplayStringAt(0, 130, (uint8_t *)temp.c_str(), CENTER_MODE);
         
         skeniraniArtikal = Artikal();
+        
+        printf("\n\n\n");
     }
 }
 
@@ -249,9 +254,20 @@ void brisanje_stanje(){
     }
 }
 
+
+void beep(float frequency, float volume, float interval, int rest) {
+    speaker.period(1.0 / frequency);
+    speaker = volume;
+    wait(interval);
+    speaker = 0.0;
+    wait(rest);
+}
+
 void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
 {
     if(trenutnoStanje==KUPOVINA){
+        beep(1000.0, 0.5, 0.1, 0);
+        
         iznosRacuna += skeniraniArtikal.cijena * kolicinaArtikla;
         kolicinaArtikla = 1.f;
         
@@ -278,10 +294,12 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
                 BSP_LCD_DisplayStringAt(0, 30, (uint8_t*)temp.naziv.c_str(), CENTER_MODE);
                 BSP_LCD_DisplayStringAt(0, 60, (uint8_t*)(std::to_string(temp.cijena).substr(0, 5) + " KM").c_str(), CENTER_MODE);
                 BSP_LCD_DisplayStringAt(0, 90, (uint8_t*)("Kolicina: " + std::to_string(kolicinaArtikla).substr(0, 5)).c_str(), CENTER_MODE);
+                
+                printf("%s - %s\n", temp.barkod.c_str(), temp.naziv.c_str());
 
-                //iznosRacuna+=sviArtikli.at(i).cijena;
                 ispis = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5)+ " KM";
                 BSP_LCD_DisplayStringAt(0, 150,(uint8_t *)ispis.c_str(), LEFT_MODE);
+                
                 break;
             }
         }
@@ -341,6 +359,9 @@ void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
             noviArtikal.cijena = cijena;
             
             sviArtikli.push_back(noviArtikal);
+            printf("Stigao novi artikal:");
+            printf("%s - %s, %.2f\n", kod.c_str(), naziv.c_str(), cijena);
+            printf("\n\n\n");
             
             BSP_LCD_DisplayStringAt(0, 40, (uint8_t *)"Unijeli ste artikal:", CENTER_MODE);
             BSP_LCD_DisplayStringAt(0, 70, (uint8_t *)kod.c_str(), CENTER_MODE);
@@ -372,6 +393,11 @@ void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
         for (; offset < sviArtikli.size(); ++offset) {
             if (sviArtikli.at(offset).barkod == payload) {
                 postoji = true;
+                
+                printf("Obrisan artikal:");
+                printf("%s - %s\n", (sviArtikli.begin() + offset)->barkod.c_str(), (sviArtikli.begin() + offset)->naziv.c_str());
+                printf("\n\n\n");
+                
                 break;
             }
         }
