@@ -1,3 +1,8 @@
+/*
+NAPOMENA:
+NE PRITISKATI DUGMAD PREBRZO!!!!
+*/
+
 #include "mbed.h"
 #include "stm32f413h_discovery_lcd.h"
 #include "MQTTNetwork.h"
@@ -18,7 +23,7 @@
 
 enum Stanja {
     POCETNO = 0,
-    SKENIRANJE,
+    KUPOVINA,
     PLACANJE,
     UNOS,
     BRISANJE
@@ -26,10 +31,18 @@ enum Stanja {
 
 
 TS_StateTypeDef TS_State = { 0 };
-InterruptIn btn0(BUTTON1);
+InterruptIn nazadNaPocetno(BUTTON1);
+InterruptIn taster_p5(p5);
+InterruptIn taster_p6(p6);
+InterruptIn taster_p7(p7);
 
 float iznosRacuna=0;
+float kolicinaArtikla = 1.;
 char trenutnoStanje=POCETNO;
+//ne moze iz interrupta refreshovati ekran
+//vec ce taj interrupt ovaj int postaviti na +-1
+//pa ce se u mainu pozvati refresh ekrana
+int promijenjenaKolicina = 0;
 
 typedef struct Artikal {
     std::string barkod, naziv;
@@ -43,9 +56,22 @@ typedef struct Artikal {
     
 } Artikal;
 
+Artikal testArtikal("AAAAAAAA", "test", 25);
 std::vector<Artikal> sviArtikli;
+Artikal skeniraniArtikal;
+
+
+void kupovina_stanje();
+void brisanje_stanje();
+void unos_stanje();
+void brisanje_stanje();
+void placanje_stanje();
 
 void pocetno_stanje(){
+    taster_p5.fall(&kupovina_stanje);
+    taster_p6.fall(&brisanje_stanje);
+    taster_p7.fall(&unos_stanje);
+    
     trenutnoStanje=POCETNO;
     iznosRacuna=0;
 
@@ -103,10 +129,24 @@ void pocetno_stanje(){
     BSP_LCD_DisplayStringAt(0, 210, (uint8_t *)"Elvir - Vedad - Tarik", CENTER_MODE);
 }
 
+void povecaj_kolicinu() {
+    promijenjenaKolicina = 1;
+}
+
+void smanji_kolicinu() {
+    promijenjenaKolicina = -1;
+}
+
 void kupovina_stanje(){
     if(trenutnoStanje == POCETNO){
+        trenutnoStanje=KUPOVINA;
+        
+        taster_p5.fall(&povecaj_kolicinu);
+        taster_p6.fall(&smanji_kolicinu);
+        taster_p7.fall(&placanje_stanje);
+        
         iznosRacuna=0;
-        trenutnoStanje=SKENIRANJE;
+        kolicinaArtikla = 1;
         std::string temp="Ukupno: " + std::to_string(iznosRacuna)+ " KM";
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
@@ -120,12 +160,33 @@ void kupovina_stanje(){
             printf("%s\n", sviArtikli.at(i).barkod.c_str());
         }
     }
+    //u slucaju povecavanja/smanjivanja kolicine ovi if-ovi ce biti ispunjen
+    else if (trenutnoStanje == KUPOVINA && promijenjenaKolicina == 1) {
+        BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
+        BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) "                      ", LEFT_MODE);
+        std::string temp=skeniraniArtikal.naziv+", cijena: "+std::to_string(skeniraniArtikal.cijena).substr(0, 5)+" KM";
+        BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) temp.c_str(), LEFT_MODE);
+        iznosRacuna+=skeniraniArtikal.cijena;
+        temp = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5) + " KM";
+        
+        BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)temp.c_str(), LEFT_MODE);
+    }
+    else if (trenutnoStanje == KUPOVINA && promijenjenaKolicina == -1) {
+        BSP_LCD_SetBackColor(LCD_COLOR_BLUE);
+        BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) "                      ", LEFT_MODE);
+        std::string temp=skeniraniArtikal.naziv+", cijena: "+std::to_string(skeniraniArtikal.cijena).substr(0, 5)+" KM";
+        BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) temp.c_str(), LEFT_MODE);
+        iznosRacuna-=skeniraniArtikal.cijena;
+        temp = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5) + " KM";
+        
+        BSP_LCD_DisplayStringAt(0, 60,(uint8_t *)temp.c_str(), LEFT_MODE);
+    }
 }
 
 void placanje_stanje() {
-    if(trenutnoStanje==SKENIRANJE){
+    if(trenutnoStanje==KUPOVINA){
         trenutnoStanje=PLACANJE;
-        std::string temp = "Uplatiti: " + std::to_string(iznosRacuna);
+        std::string temp = "Uplatiti: " + std::to_string(iznosRacuna).substr(0, 5);
         temp += " KM";
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
@@ -163,7 +224,7 @@ void brisanje_stanje(){
 
 void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
 {
-    if(trenutnoStanje==SKENIRANJE){
+    if(trenutnoStanje==KUPOVINA){
         BSP_LCD_Clear(LCD_COLOR_WHITE);
         BSP_LCD_SetTextColor(LCD_COLOR_BLUE);
         BSP_LCD_FillRect(0, 0, BSP_LCD_GetXSize(), BSP_LCD_GetYSize());
@@ -183,15 +244,17 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
             Artikal temp = sviArtikli.at(i);
             if (payload == temp.barkod) {
                 nadjen = true;
-                std::string art=temp.naziv+", cijena: "+std::to_string(temp.cijena)+" KM";
+                skeniraniArtikal = temp;
+                std::string art=temp.naziv+", cijena: "+std::to_string(temp.cijena).substr(0, 5)+" KM";
                 BSP_LCD_DisplayStringAt(0, 30, (uint8_t *) art.c_str(), CENTER_MODE);
                 iznosRacuna+=sviArtikli.at(i).cijena;
-                ispis = "Ukupno: " + std::to_string(iznosRacuna)+ " KM";
+                ispis = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5)+ " KM";
                 break;
             }
         }
         
         if (!nadjen) {
+            skeniraniArtikal = Artikal();
             BSP_LCD_DisplayStringAt(0, 30, (uint8_t *)"Nepostojeci artikal", CENTER_MODE);
         }
         
@@ -288,6 +351,7 @@ void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
 }
 
 int main() {
+    sviArtikli.push_back(testArtikal);
 
     NetworkInterface *network;
     network = NetworkInterface::get_default_instance();
@@ -338,38 +402,18 @@ int main() {
     
 
     pocetno_stanje();
-    btn0.fall(&pocetno_stanje);
+    nazadNaPocetno.fall(&pocetno_stanje);
 
     while (1) {
         rc = client.subscribe(TEMAKUPOVINA, MQTT::QOS0, mqtt_stigao_skenirani_artikal);
         rc = client.subscribe(TEMAUNOS, MQTT::QOS0, mqtt_stigao_novi_artikal);
         rc = client.subscribe(TEMABRISANJE, MQTT::QOS0, mqtt_stigao_barkod_za_brisanje);
         
-        if(trenutnoStanje==POCETNO) {
-           BSP_TS_GetState(&TS_State);
-            if(TS_State.touchDetected) {
-                
-                uint16_t x1 = TS_State.touchX[0];
-                uint16_t y1 = TS_State.touchY[0];
-    
-                if((unsigned int)y1<=80 && (unsigned int)y1>40) 
-                    kupovina_stanje();
-                if((unsigned int)y1>80 && (unsigned int)y1<=120) 
-                    brisanje_stanje();
-                if((unsigned int)y1>120 && (unsigned int)y1<=160) 
-                    unos_stanje();
-                
-            }
-
+        if (promijenjenaKolicina != 0) {
+            kupovina_stanje();
+            promijenjenaKolicina = 0;
         }
-        else if(trenutnoStanje==SKENIRANJE) {
-            BSP_TS_GetState(&TS_State);
-            uint16_t x1 = TS_State.touchX[0];
-            uint16_t y1 = TS_State.touchY[0];
-            if(TS_State.touchDetected) 
-                if((unsigned int)y1>=BSP_LCD_GetYSize()-40 && (unsigned int)y1<BSP_LCD_GetYSize()) 
-                    placanje_stanje();
-        }
-        wait_ms(1);
+        
+        wait_ms(5);
     }
 }
