@@ -61,7 +61,6 @@ typedef struct Artikal {
     
 } Artikal;
 
-Artikal testArtikal("6901443306343", "zvucnik", 25);
 std::vector<Artikal> sviArtikli;
 Artikal skeniraniArtikal;
 
@@ -531,8 +530,6 @@ void gasi_ledice() {
 }
 
 int main() {
-    sviArtikli.push_back(testArtikal);
-
     NetworkInterface *network;
     network = NetworkInterface::get_default_instance();
 
