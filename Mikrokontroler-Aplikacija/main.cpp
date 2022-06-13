@@ -35,6 +35,9 @@ InterruptIn nazadNaPocetno(BUTTON1);
 InterruptIn taster_p5(p5);
 InterruptIn taster_p6(p6);
 InterruptIn taster_p7(p7);
+InterruptIn taster_p8(p8);
+InterruptIn taster_p9(p9);
+AnalogIn potenciometar(p20);
 
 float iznosRacuna=0;
 float kolicinaArtikla = 1.;
@@ -142,13 +145,25 @@ void smanji_kolicinu() {
     }
 }
 
+void decimalno_povecaj_kolicinu() {
+    kolicinaArtikla += potenciometar;
+    promijenjenaKolicina = 1;
+}
+
+void decimalno_smanji_kolicinu() {
+    kolicinaArtikla -= potenciometar;
+    promijenjenaKolicina = -1;
+}
+
 void kupovina_stanje(){
     if(trenutnoStanje == POCETNO){
         trenutnoStanje=KUPOVINA;
         
         taster_p5.fall(&povecaj_kolicinu);
         taster_p6.fall(&smanji_kolicinu);
-        taster_p7.fall(&placanje_stanje);
+        taster_p7.fall(&decimalno_povecaj_kolicinu);
+        taster_p8.fall(&decimalno_smanji_kolicinu);
+        taster_p9.fall(&placanje_stanje);
         
         iznosRacuna=0;
         kolicinaArtikla = 1;
