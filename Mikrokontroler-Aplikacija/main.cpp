@@ -593,9 +593,9 @@ int main() {
         
         pali_ledice();
         
-        if (promijenjenaKolicina != 0) {
+        if (promijenjenaKolicina) {
             kupovina_stanje();
-            promijenjenaKolicina = 0;
+            promijenjenaKolicina = false;
         }
         
         wait_ms(1);
