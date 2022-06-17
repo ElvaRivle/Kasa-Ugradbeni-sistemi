@@ -37,7 +37,12 @@ dependencies:
 
   flutter_barcode_scanner: ^2.0.0
   mqtt_client: ^9.6.8
-  flutter_beep: ^1.0.0
+  flutter_launcher_icons: ^0.9.3
+
+flutter_icons:
+  image_path: "images/icon.png"
+  android: true
+  ios: false
 
 dev_dependencies:
   flutter_test:

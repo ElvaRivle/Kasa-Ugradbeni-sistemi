@@ -5,7 +5,6 @@ import 'dart:ffi';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_barcode_scanner/flutter_barcode_scanner.dart';
-import 'package:flutter_beep/flutter_beep.dart';
 import 'package:mqtt_client/mqtt_server_client.dart' as mqtt;
 import 'package:mqtt_client/mqtt_client.dart' as mqttClient;
 
