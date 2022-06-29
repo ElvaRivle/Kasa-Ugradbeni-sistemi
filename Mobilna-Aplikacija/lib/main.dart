@@ -82,7 +82,7 @@ class HomeScreenWidget extends StatelessWidget {
                     }
                     Navigator.push(context, MaterialPageRoute(builder: (context) => NormalModeWidget(client: client)));
                   },
-                  child: const Text('Rezim normalnog rada'),
+                  child: const Text('Rezim normalnog rada', style: TextStyle(fontWeight: FontWeight.bold),),
               ),
               ElevatedButton(
                   onPressed: () {
@@ -91,10 +91,7 @@ class HomeScreenWidget extends StatelessWidget {
                     }
                     Navigator.push(context, MaterialPageRoute(builder: (context) => InsertModeWidget(client: client)));
                   },
-                  child: Text('Rezim unosa artikala'),
-                style: ElevatedButton.styleFrom(
-                    primary: Colors.green
-                ),
+                  child: const Text('Rezim unosa artikala', style: TextStyle(fontWeight: FontWeight.bold),),
               ),
               ElevatedButton(
                   onPressed: () {
@@ -103,10 +100,7 @@ class HomeScreenWidget extends StatelessWidget {
                     }
                     Navigator.push(context, MaterialPageRoute(builder: (context) => DeleteModeWidget(client: client)));
                   },
-                  child: const Text("Rezim brisanja artikala"),
-                  style: ElevatedButton.styleFrom(
-                      primary: Colors.pink.shade700
-                  ),
+                  child: const Text("Rezim brisanja artikala", style: TextStyle(fontWeight: FontWeight.bold),),
               )
             ]
           )
@@ -222,7 +216,7 @@ class NormalModeState extends State<NormalModeWidget> {
                             child: ElevatedButton(
                                 onPressed: () => startBarcodeScanStream(),
                                 style: ElevatedButton.styleFrom(
-                                  primary: Colors.lightBlue.shade300
+                                  primary: Colors.lightBlue.shade400
                                 ),
                                 child: const Text('Neprekidno skeniranje artikala'),
                             ),
@@ -231,7 +225,10 @@ class NormalModeState extends State<NormalModeWidget> {
                               onPressed: () {
                                 scanBarcodeNormal();
                               },
-                              child: const Text('Skeniranje pojedinacnih artikala')),
+                              style: ElevatedButton.styleFrom(
+                                  primary: Colors.lightBlue.shade400
+                              ),
+                              child: const Text('Skeniranje jednog artikla')),
                           Text('Barkod: $_scanBarcode\n',
                               style: const TextStyle(fontSize: 20)),
                           ElevatedButton(
@@ -239,7 +236,7 @@ class NormalModeState extends State<NormalModeWidget> {
                               style: ElevatedButton.styleFrom(
                                 //primary: Colors.green
                               ),
-                              child: const Text("Slanje skeniranog barkoda")
+                              child: const Text("Slanje skeniranog artikla", style: TextStyle(fontWeight: FontWeight.bold),)
                           ),
                           Text('$successMessage\n',
                           style: const TextStyle(fontSize: 20))
@@ -378,15 +375,15 @@ class InsertModeState extends State<InsertModeWidget> {
                             ),
                             ElevatedButton(
                                 onPressed: () => scanBarcodeNormal(),
+                                style: ElevatedButton.styleFrom(
+                                    primary: Colors.lightBlue.shade400
+                                ),
                                 child: const Text('Skeniranje barkoda')),
                             Text('Barkod: $_scanBarcode\n',
                                 style: const TextStyle(fontSize: 20)),
                             ElevatedButton(
                                 onPressed: () => SendAll(),
-                                style: ElevatedButton.styleFrom(
-                                    primary: Colors.green
-                                ),
-                                child: const Text("Slanje artikla")
+                                child: const Text("Slanje artikla", style: TextStyle(fontWeight: FontWeight.bold),)
                             ),
                             Text('$successMessage\n',
                                 style: const TextStyle(fontSize: 20))
@@ -495,15 +492,15 @@ class DeleteModeState extends State<DeleteModeWidget> {
                                 onPressed: () {
                                   scanBarcodeNormal();
                                 },
+                                style: ElevatedButton.styleFrom(
+                                    primary: Colors.lightBlue.shade400
+                                ),
                                 child: const Text('Skeniranje barkoda')),
                             Text('Barkod: $_scanBarcode\n',
                                 style: const TextStyle(fontSize: 20)),
                             ElevatedButton(
                                 onPressed: () => SendBarCode(),
-                                style: ElevatedButton.styleFrom(
-                                    primary: Colors.pink.shade700
-                                ),
-                                child: const Text("Slanje skeniranog barkoda")
+                                child: const Text("Slanje skeniranog artikla", style: TextStyle(fontWeight: FontWeight.bold),)
                             ),
                             Text('$successMessage\n',
                                 style: const TextStyle(fontSize: 20))
