@@ -65,6 +65,23 @@ std::vector<Artikal> sviArtikli;
 Artikal skeniraniArtikal;
 
 
+std::string cijena_na_2_decimale(double cijena) {
+    std::string cijenaStringTemp = std::to_string(cijena);
+    std::string cijenaString = "";
+
+    for (int i = 0; i < cijenaStringTemp.size(); ++i) {
+        cijenaString += cijenaStringTemp.at(i);
+        if (cijenaStringTemp.at(i) == '.') {
+            cijenaString += cijenaStringTemp.at(i+1);
+            cijenaString += cijenaStringTemp.at(i+2);
+            break;
+        }
+    }
+
+    return cijenaString;
+}
+
+
 //neke funkcije je potrebno naznaciti da postoje
 //prije nego sto se definisu
 void kupovina_stanje();
@@ -96,7 +113,7 @@ void pocetno_stanje(){
     BSP_LCD_SetTextColor(LCD_COLOR_WHITE);
     BSP_LCD_SetBackColor(LCD_COLOR_DARKGRAY);
     BSP_LCD_SetFont(&Font16);
-    BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Odaberite opciju:", CENTER_MODE);
+    BSP_LCD_DisplayStringAt(0, 15, (uint8_t *)"Odaberite opciju: ", CENTER_MODE);
     
     
     
@@ -210,16 +227,19 @@ void kupovina_stanje(){
         BSP_LCD_DisplayStringAt(0, 80, (uint8_t *) "                      ", CENTER_MODE);
         BSP_LCD_DisplayStringAt(0, 110, (uint8_t *) "                      ", CENTER_MODE);
         BSP_LCD_DisplayStringAt(0, 160, (uint8_t *) "                      ", LEFT_MODE);
+
+        
+
         
         BSP_LCD_DisplayStringAt(
             0, 
             80, 
-        (uint8_t*)(std::to_string(skeniraniArtikal.cijena * (kolicinaArtikla + decimalnaKolicinaArtikla)).substr(0,5) + " KM").c_str(),
+        (uint8_t*)(cijena_na_2_decimale(skeniraniArtikal.cijena * (kolicinaArtikla + decimalnaKolicinaArtikla)) + " KM").c_str(),
         CENTER_MODE);
         
-        BSP_LCD_DisplayStringAt(0, 110, (uint8_t*)("Kolicina: " + std::to_string(kolicinaArtikla + decimalnaKolicinaArtikla).substr(0,5)).c_str(), CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 110, (uint8_t*)("Kolicina: " + cijena_na_2_decimale(kolicinaArtikla + decimalnaKolicinaArtikla)).c_str(), CENTER_MODE);
         
-        std::string temp = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5) + " KM";
+        std::string temp = "Ukupno: " + cijena_na_2_decimale(iznosRacuna) + " KM";
         
         BSP_LCD_DisplayStringAt(0, 160, (uint8_t *)temp.c_str(), LEFT_MODE);
     }
@@ -230,7 +250,6 @@ void placanje_stanje() {
     if(trenutnoStanje==KUPOVINA){
         trenutnoStanje=PLACANJE;
         iznosRacuna += skeniraniArtikal.cijena * (kolicinaArtikla + decimalnaKolicinaArtikla);
-        std::string temp = std::to_string(iznosRacuna).substr(0, 5) + " KM";
         
         BSP_LCD_Clear(LCD_COLOR_LIGHTGRAY);
     
@@ -246,7 +265,10 @@ void placanje_stanje() {
         
         BSP_LCD_SetTextColor(LCD_COLOR_BLACK);
         BSP_LCD_SetBackColor(LCD_COLOR_LIGHTGRAY);
-        BSP_LCD_DisplayStringAt(0, 100, (uint8_t *)"Konacni iznos racuna:", CENTER_MODE);
+        BSP_LCD_DisplayStringAt(0, 100, (uint8_t *)"Konacni iznos racuna: ", CENTER_MODE);
+
+        std::string temp = cijena_na_2_decimale(iznosRacuna) + " KM";
+
         BSP_LCD_DisplayStringAt(0, 130, (uint8_t *)temp.c_str(), CENTER_MODE);
         
         skeniraniArtikal = Artikal();
@@ -352,12 +374,12 @@ void mqtt_stigao_skenirani_artikal(MQTT::MessageData& md)
                 skeniraniArtikal = temp;
                 
                 BSP_LCD_DisplayStringAt(0, 50, (uint8_t*)temp.naziv.c_str(), CENTER_MODE);
-                BSP_LCD_DisplayStringAt(0, 80, (uint8_t*)(std::to_string(temp.cijena).substr(0, 5) + " KM").c_str(), CENTER_MODE);
-                BSP_LCD_DisplayStringAt(0, 110, (uint8_t*)("Kolicina: " + std::to_string(kolicinaArtikla + decimalnaKolicinaArtikla).substr(0, 5)).c_str(), CENTER_MODE);
+                BSP_LCD_DisplayStringAt(0, 80, (uint8_t*)(cijena_na_2_decimale(temp.cijena) + " KM").c_str(), CENTER_MODE);
+                BSP_LCD_DisplayStringAt(0, 110, (uint8_t*)("Kolicina: " + cijena_na_2_decimale(kolicinaArtikla + decimalnaKolicinaArtikla)).c_str(), CENTER_MODE);
                 
                 printf("%s - %s\n", temp.barkod.c_str(), temp.naziv.c_str());
 
-                ispis = "Ukupno: " + std::to_string(iznosRacuna).substr(0, 5)+ " KM";
+                ispis = "Ukupno: " + cijena_na_2_decimale(iznosRacuna) + " KM";
                 BSP_LCD_DisplayStringAt(0, 160,(uint8_t *)ispis.c_str(), LEFT_MODE);
                 
                 break;
@@ -431,14 +453,14 @@ void mqtt_stigao_novi_artikal(MQTT::MessageData& md)
             noviArtikal.cijena = cijena;
             
             sviArtikli.push_back(noviArtikal);
-            printf("Stigao novi artikal:");
+            printf("Stigao novi artikal: ");
             printf("%s - %s, %.2f\n", kod.c_str(), naziv.c_str(), cijena);
             printf("\n\n\n");
             
             BSP_LCD_DisplayStringAt(0, 50, (uint8_t *)"Unijeli ste artikal:", CENTER_MODE);
             BSP_LCD_DisplayStringAt(0, 80, (uint8_t *)kod.c_str(), CENTER_MODE);
             BSP_LCD_DisplayStringAt(0, 110, (uint8_t *)naziv.c_str(), CENTER_MODE);
-            BSP_LCD_DisplayStringAt(0, 140, (uint8_t *)std::to_string(cijena).substr(0,5).c_str(), CENTER_MODE);
+            BSP_LCD_DisplayStringAt(0, 140, (uint8_t *)(cijena_na_2_decimale(cijena) + " KM").c_str(), CENTER_MODE);
         }
         else {
             //BSP_LCD_DisplayStringAt(0, 50, (uint8_t *)"                     ", CENTER_MODE);
@@ -480,7 +502,7 @@ void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
             if (sviArtikli.at(offset).barkod == payload) {
                 postoji = true;
                 
-                printf("Obrisan artikal:");
+                printf("Obrisan artikal: ");
                 printf("%s - %s\n", (sviArtikli.begin() + offset)->barkod.c_str(), (sviArtikli.begin() + offset)->naziv.c_str());
                 printf("\n\n\n");
                 
@@ -489,7 +511,7 @@ void mqtt_stigao_barkod_za_brisanje(MQTT::MessageData& md)
         }
         
         if (postoji) {
-            BSP_LCD_DisplayStringAt(0, 50, (uint8_t *)"Obrisali ste artikal:", CENTER_MODE);
+            BSP_LCD_DisplayStringAt(0, 50, (uint8_t *)"Obrisali ste artikal: ", CENTER_MODE);
             BSP_LCD_DisplayStringAt(0, 80, (uint8_t *)(*(sviArtikli.begin() + offset)).naziv.c_str(), CENTER_MODE);
             sviArtikli.erase(sviArtikli.begin() + offset);
         }
