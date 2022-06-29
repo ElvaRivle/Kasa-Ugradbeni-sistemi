@@ -82,7 +82,7 @@ class HomeScreenWidget extends StatelessWidget {
                     }
                     Navigator.push(context, MaterialPageRoute(builder: (context) => NormalModeWidget(client: client)));
                   },
-                  child: const Text('Rezim normalnog rada')
+                  child: const Text('Rezim normalnog rada'),
               ),
               ElevatedButton(
                   onPressed: () {
@@ -91,7 +91,10 @@ class HomeScreenWidget extends StatelessWidget {
                     }
                     Navigator.push(context, MaterialPageRoute(builder: (context) => InsertModeWidget(client: client)));
                   },
-                  child: Text('Rezim unosa artikala')
+                  child: Text('Rezim unosa artikala'),
+                style: ElevatedButton.styleFrom(
+                    primary: Colors.green
+                ),
               ),
               ElevatedButton(
                   onPressed: () {
@@ -100,7 +103,10 @@ class HomeScreenWidget extends StatelessWidget {
                     }
                     Navigator.push(context, MaterialPageRoute(builder: (context) => DeleteModeWidget(client: client)));
                   },
-                  child: const Text("Rezim brisanja artikala")
+                  child: const Text("Rezim brisanja artikala"),
+                  style: ElevatedButton.styleFrom(
+                      primary: Colors.pink.shade700
+                  ),
               )
             ]
           )
@@ -212,18 +218,27 @@ class NormalModeState extends State<NormalModeWidget> {
                         direction: Axis.vertical,
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: <Widget>[
+                          Padding(padding: const EdgeInsets.only(bottom: 50),
+                            child: ElevatedButton(
+                                onPressed: () => startBarcodeScanStream(),
+                                style: ElevatedButton.styleFrom(
+                                  primary: Colors.lightBlue.shade300
+                                ),
+                                child: const Text('Neprekidno skeniranje artikala'),
+                            ),
+                          ),
                           ElevatedButton(
                               onPressed: () {
                                 scanBarcodeNormal();
                               },
                               child: const Text('Skeniranje pojedinacnih artikala')),
-                          ElevatedButton(
-                              onPressed: () => startBarcodeScanStream(),
-                              child: const Text('Neprekidno skeniranje artikala')),
                           Text('Barkod: $_scanBarcode\n',
                               style: const TextStyle(fontSize: 20)),
                           ElevatedButton(
                               onPressed: () => SendBarCode(),
+                              style: ElevatedButton.styleFrom(
+                                //primary: Colors.green
+                              ),
                               child: const Text("Slanje skeniranog barkoda")
                           ),
                           Text('$successMessage\n',
@@ -264,6 +279,7 @@ class InsertModeState extends State<InsertModeWidget> {
   void dispose() {
     textController.dispose();
     priceController.dispose();
+    super.dispose();
     //smijemo li pozvati super.dispose() da se ne ukine konekcija na broker
     //mada sam se osigurao u home ruti da ako konekcija nije uspostavljena da je uspostavi
   }
@@ -340,27 +356,36 @@ class InsertModeState extends State<InsertModeWidget> {
                           direction: Axis.vertical,
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: <Widget>[
-                            TextField(
-                              controller: textController,
-                              autofocus: true,
-                              decoration: const InputDecoration(
-                                hintText: "Unesite naziv artikla"
+                            Padding(padding: const EdgeInsets.all(10), child:
+                              TextField(
+                                controller: textController,
+                                autofocus: true,
+                                decoration: const InputDecoration(
+                                  hintText: "Unesite naziv artikla",
+                                ),
+                                maxLength: 15,
                               ),
                             ),
-                            TextField(
-                              controller: priceController,
-                              autofocus: false,
-                              decoration: const InputDecoration(
-                                  hintText: "Unesite cijenu artikla"
+                            Padding(padding: const EdgeInsets.all(10), child:
+                              TextField(
+                                controller: priceController,
+                                autofocus: false,
+                                keyboardType: TextInputType.number,
+                                decoration: const InputDecoration(
+                                    hintText: "Unesite cijenu artikla"
+                                ),
                               ),
                             ),
                             ElevatedButton(
                                 onPressed: () => scanBarcodeNormal(),
-                                child: const Text('Unesite barkod artikla')),
+                                child: const Text('Skeniranje barkoda')),
                             Text('Barkod: $_scanBarcode\n',
                                 style: const TextStyle(fontSize: 20)),
                             ElevatedButton(
                                 onPressed: () => SendAll(),
+                                style: ElevatedButton.styleFrom(
+                                    primary: Colors.green
+                                ),
                                 child: const Text("Slanje artikla")
                             ),
                             Text('$successMessage\n',
@@ -475,6 +500,9 @@ class DeleteModeState extends State<DeleteModeWidget> {
                                 style: const TextStyle(fontSize: 20)),
                             ElevatedButton(
                                 onPressed: () => SendBarCode(),
+                                style: ElevatedButton.styleFrom(
+                                    primary: Colors.pink.shade700
+                                ),
                                 child: const Text("Slanje skeniranog barkoda")
                             ),
                             Text('$successMessage\n',
