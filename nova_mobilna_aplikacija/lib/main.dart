@@ -16,12 +16,23 @@ void main() {
   ));
 }
 
-class HomeScreenWidget extends StatelessWidget {
-  HomeScreenWidget({super.key});
+class HomeScreenWidget extends StatefulWidget {
+  HomeScreenWidget();
 
-  final mqtt.MqttServerClient client = mqtt.MqttServerClient("192.168.0.6", "Telefon");
+  @override
+  HomeScreenState createState() => HomeScreenState();
+}
 
-  //client.connect je async
+class HomeScreenState extends State<HomeScreenWidget> {
+  String _scanBarcode = '';
+  String successMessage = '';
+  final mqtt.MqttServerClient client;
+  
+  HomeScreenState() : client = mqtt.MqttServerClient("192.168.0.6", "Telefon") {
+    _connect();
+  }
+
+    //client.connect je async
   //mada cemo je sinhrono pozivati!
   void _connect() {
     client.useWebSocket = false;
@@ -64,49 +75,6 @@ class HomeScreenWidget extends StatelessWidget {
   }
 
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Kasa")
-      ),
-      body: Container(
-          alignment: Alignment.center,
-          child: Flex(
-            direction: Axis.vertical,
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: <Widget>[
-              ElevatedButton(
-                  onPressed: () {
-                    if (client.connectionStatus!.state != mqttClient.MqttConnectionState.connected) {
-                      _connect();
-                    }
-                    Navigator.push(context, MaterialPageRoute(builder: (context) => NormalModeWidget(client: client)));
-                  },
-                  child: const Text('Rezim normalnog rada', style: TextStyle(fontWeight: FontWeight.bold),),
-              )
-            ]
-          )
-        )
-      );
-  }
-
-}
-
-class NormalModeWidget extends StatefulWidget {
-  const NormalModeWidget({Key? key, required this.client}) : super(key: key);
-
-  final mqtt.MqttServerClient client;
-
-  @override
-  NormalModeState createState() => NormalModeState();
-}
-
-class NormalModeState extends State<NormalModeWidget> {
-  String _scanBarcode = '';
-  String successMessage = '';
-
-
   //ne treba ovdje future jer nista nije async
   Future<void> SendBarCode() async {
     try {
@@ -117,11 +85,11 @@ class NormalModeState extends State<NormalModeWidget> {
 
       /// Subscribe to it
 
-      widget.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
+      this.client.subscribe(pubTopic, mqttClient.MqttQos.atMostOnce);
 
       /// Publish it
 
-      widget.client.publishMessage(
+      this.client.publishMessage(
           pubTopic, mqttClient.MqttQos.atMostOnce, builder.payload!);
 
       setState(() {
@@ -129,13 +97,11 @@ class NormalModeState extends State<NormalModeWidget> {
       });
     }
     on Exception catch(e) {
-      print('error: $e.toString()');
       setState(() {
         successMessage = "Neuspjesno slanje barkoda.";
       });
     }
   }
-
 
 
   @override
@@ -167,10 +133,7 @@ class NormalModeState extends State<NormalModeWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return WillPopScope(
-      child:
-        MaterialApp(
-          home: Scaffold(
+    return Scaffold(
               appBar: AppBar(title: const Text('Barkod skener')),
               body: Builder(builder: (BuildContext context) {
                 return Container(
@@ -199,12 +162,6 @@ class NormalModeState extends State<NormalModeWidget> {
                           Text('$successMessage\n',
                           style: const TextStyle(fontSize: 20))
                         ]));
-              }))
-        ),
-      onWillPop: () async {
-        Navigator.pop(context);
-        return false;
-      }
-    );
+              }));
   }
 }
