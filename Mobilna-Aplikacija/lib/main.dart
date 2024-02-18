@@ -216,7 +216,7 @@ class NormalModeState extends State<NormalModeWidget> {
                             child: ElevatedButton(
                                 onPressed: () => startBarcodeScanStream(),
                                 style: ElevatedButton.styleFrom(
-                                  primary: Colors.lightBlue.shade400
+                                  backgroundColor: Colors.lightBlue.shade400
                                 ),
                                 child: const Text('Neprekidno skeniranje artikala'),
                             ),
@@ -226,7 +226,7 @@ class NormalModeState extends State<NormalModeWidget> {
                                 scanBarcodeNormal();
                               },
                               style: ElevatedButton.styleFrom(
-                                  primary: Colors.lightBlue.shade400
+                                  backgroundColor: Colors.lightBlue.shade400
                               ),
                               child: const Text('Skeniranje jednog artikla')),
                           Text('Barkod: $_scanBarcode\n',
@@ -234,7 +234,7 @@ class NormalModeState extends State<NormalModeWidget> {
                           ElevatedButton(
                               onPressed: () => SendBarCode(),
                               style: ElevatedButton.styleFrom(
-                                //primary: Colors.green
+                                //backgroundColor: Colors.green
                               ),
                               child: const Text("Slanje skeniranog artikla", style: TextStyle(fontWeight: FontWeight.bold),)
                           ),
@@ -376,7 +376,7 @@ class InsertModeState extends State<InsertModeWidget> {
                             ElevatedButton(
                                 onPressed: () => scanBarcodeNormal(),
                                 style: ElevatedButton.styleFrom(
-                                    primary: Colors.lightBlue.shade400
+                                    backgroundColor: Colors.lightBlue.shade400
                                 ),
                                 child: const Text('Skeniranje barkoda')),
                             Text('Barkod: $_scanBarcode\n',
@@ -493,7 +493,7 @@ class DeleteModeState extends State<DeleteModeWidget> {
                                   scanBarcodeNormal();
                                 },
                                 style: ElevatedButton.styleFrom(
-                                    primary: Colors.lightBlue.shade400
+                                    backgroundColor: Colors.lightBlue.shade400
                                 ),
                                 child: const Text('Skeniranje barkoda')),
                             Text('Barkod: $_scanBarcode\n',
